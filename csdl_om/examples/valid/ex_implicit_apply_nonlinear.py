@@ -1,5 +1,6 @@
 from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS
-from csdl import ImplicitModel
+from csdl import Model, ImplicitModel
+import csdl
 import numpy as np
 from csdl_om import Simulator
 
@@ -7,15 +8,14 @@ from csdl_om import Simulator
 class ExampleApplyNonlinear(ImplicitModel):
     def define(self):
         with self.create_model('sys') as model:
-            model.create_input('a', val=1)
-            model.create_input('b', val=-4)
-            model.create_input('c', val=3)
-        a = self.declare_variable('a')
-        b = self.declare_variable('b')
-        c = self.declare_variable('c')
+            model.create_indep_var('a', val=1)
+            model.create_indep_var('b', val=-4)
+            model.create_indep_var('c', val=3)
+        a = self.declare_input('a')
+        b = self.declare_input('b')
+        c = self.declare_input('c')
 
         x = self.create_implicit_output('x')
-        print('x', x)
         y = a * x**2 + b * x + c
 
         x.define_residual(y)
@@ -25,6 +25,3 @@ class ExampleApplyNonlinear(ImplicitModel):
 
 sim = Simulator(ExampleApplyNonlinear())
 sim.run()
-
-print('x', sim['x'].shape)
-print(sim['x'])

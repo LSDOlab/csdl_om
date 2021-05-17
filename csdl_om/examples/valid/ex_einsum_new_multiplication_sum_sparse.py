@@ -23,6 +23,5 @@ sim.run()
 
 print('a', sim['a'].shape)
 print(sim['a'])
-print('einsum_special1_sparse_derivs',
-      sim['einsum_special1_sparse_derivs'].shape)
+print('einsum_special1_sparse_derivs', sim['einsum_special1_sparse_derivs'].shape)
 print(sim['einsum_special1_sparse_derivs'])

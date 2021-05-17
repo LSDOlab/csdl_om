@@ -1,5 +1,6 @@
 from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS
-from csdl import ImplicitModel, Model
+from csdl import Model, ImplicitModel
+import csdl
 import numpy as np
 from csdl_om import Simulator
 
@@ -8,7 +9,7 @@ class ExampleWithSubsystemsVisualizeInternalModel(ImplicitModel):
     def define(self):
         self.visualize = True
 
-        #  define a subsystem (this is a very simple example)
+        # define a subsystem (this is a very simple example)
         model = Model()
         p = model.create_input('p', val=7)
         q = model.create_input('q', val=8)
@@ -39,11 +40,12 @@ class ExampleWithSubsystemsVisualizeInternalModel(ImplicitModel):
         y = self.create_implicit_output('y')
         z = a * y**2 + b * y + c - r
         y.define_residual(z)
-        self.linear_solver = ScipyKrylov()
-        self.nonlinear_solver = NewtonSolver(
-            solve_subsystems=False,
-            maxiter=100,
-        )
+        # self.linear_solver = ScipyKrylov()
+        # self.nonlinear_solver = NewtonSolver(
+        #     solve_subsystems=False,
+        #     maxiter=100,
+        # )
 
 
 sim = Simulator(ExampleWithSubsystemsVisualizeInternalModel())
+sim.run()
