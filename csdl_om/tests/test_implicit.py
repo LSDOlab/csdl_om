@@ -4,7 +4,7 @@ import pytest
 
 
 def test_implicit_nonlinear():
-    import csdl_om.examples.valid.ex_implicit_apply_nonlinear as example
+    import omtools.examples.valid.ex_implicit_apply_nonlinear as example
 
     example.sim.set_val('x', 1.9)
     example.sim.run_model()
@@ -16,12 +16,12 @@ def test_implicit_nonlinear():
 
 
 def test_solve_quadratic_bracketed_scalar():
-    import csdl_om.examples.valid.ex_implicit_bracketed_scalar as example
+    import omtools.examples.valid.ex_implicit_bracketed_scalar as example
     np.testing.assert_almost_equal(example.sim['x'], np.array([1.0]))
 
 
 def test_solve_quadratic_bracketed_array():
-    import csdl_om.examples.valid.ex_implicit_bracketed_array as example
+    import omtools.examples.valid.ex_implicit_bracketed_array as example
     np.testing.assert_almost_equal(
         example.sim['x'],
         np.array([1.0, 3.0]),
@@ -29,7 +29,7 @@ def test_solve_quadratic_bracketed_array():
 
 
 def test_implicit_nonlinear_with_subsystems_in_residual():
-    import csdl_om.examples.valid.ex_implicit_with_subsystems as example
+    import omtools.examples.valid.ex_implicit_with_subsystems as example
 
     # example.sim.set_val('y', 1.9)
     # example.sim.run_model()
@@ -38,7 +38,7 @@ def test_implicit_nonlinear_with_subsystems_in_residual():
 
 
 def test_implicit_nonlinear_with_subsystems_bracketed_scalar():
-    import csdl_om.examples.valid.ex_implicit_with_subsystems_bracketed_scalar as example
+    import omtools.examples.valid.ex_implicit_with_subsystems_bracketed_scalar as example
     np.testing.assert_almost_equal(
         example.sim['y'],
         np.array([1.07440944]),
@@ -46,7 +46,7 @@ def test_implicit_nonlinear_with_subsystems_bracketed_scalar():
 
 
 def test_implicit_nonlinear_with_subsystems_bracketed_array():
-    import csdl_om.examples.valid.ex_implicit_with_subsystems_bracketed_array as example
+    import omtools.examples.valid.ex_implicit_with_subsystems_bracketed_array as example
     np.testing.assert_almost_equal(
         example.sim['y'],
         np.array([1.07440944, 2.48391993]),

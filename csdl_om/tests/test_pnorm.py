@@ -4,7 +4,7 @@ import pytest
 
 
 def test_pnorm_axisfree_norm():
-    import csdl_om.examples.valid.ex_pnorm_axis_free as example
+    import omtools.examples.valid.ex_pnorm_axis_free as example
 
     i = 2
     j = 3
@@ -20,12 +20,15 @@ def test_pnorm_axisfree_norm():
                                    desired_output)
 
     partials_error = example.sim.check_partials(
-        includes=['comp_axis_free_pnorm'], out_stream=None, compact_print=True)
+        includes=['comp_axis_free_pnorm'],
+        out_stream=None,
+        compact_print=True,
+        method='fd')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)
 
 
 def test_pnorm_axiswise():
-    import csdl_om.examples.valid.ex_pnorm_axis_wise as example
+    import omtools.examples.valid.ex_pnorm_axis_wise as example
 
     i = 2
     j = 3
@@ -43,15 +46,18 @@ def test_pnorm_axiswise():
                                    desired_output)
 
     partials_error = example.sim.check_partials(
-        includes=['comp_axiswise_pnorm'], out_stream=None, compact_print=True)
+        includes=['comp_axiswise_pnorm'],
+        out_stream=None,
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)
 
 
 def test_pnorm_type_not_positive():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_pnorm_type_not_positive as example
+        import omtools.examples.invalid.ex_pnorm_type_not_positive as example
 
 
 def test_pnorm_type_not_even():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_pnorm_type_not_even as example
+        import omtools.examples.invalid.ex_pnorm_type_not_even as example

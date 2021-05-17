@@ -4,7 +4,7 @@ import pytest
 
 
 def test_vector_vector_inner():
-    import csdl_om.examples.valid.ex_inner_vector_vector as example
+    import omtools.examples.valid.ex_inner_vector_vector as example
 
     m = 3
 
@@ -21,12 +21,13 @@ def test_vector_vector_inner():
 
     partials_error = example.sim.check_partials(includes=['comp_VecVecInner'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_tensor_vector_inner():
-    import csdl_om.examples.valid.ex_inner_tensor_vector as example
+    import omtools.examples.valid.ex_inner_tensor_vector as example
 
     m = 3
     n = 4
@@ -54,12 +55,13 @@ def test_tensor_vector_inner():
 
     partials_error = example.sim.check_partials(includes=['comp_TenVecInner'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_tensor_tensor_inner():
-    import csdl_om.examples.valid.ex_inner_tensor_tensor as example
+    import omtools.examples.valid.ex_inner_tensor_tensor as example
 
     m = 3
     n = 4
@@ -81,5 +83,6 @@ def test_tensor_tensor_inner():
 
     partials_error = example.sim.check_partials(includes=['comp_TenTenInner'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-4, rtol=1.e-4)

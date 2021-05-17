@@ -4,7 +4,7 @@ import pytest
 
 
 def test_matrix_vector_multiplication():
-    import csdl_om.examples.valid.ex_matvec_mat_vec_product as example
+    import omtools.examples.valid.ex_matvec_mat_vec_product as example
 
     m = 3
     n = 4
@@ -27,10 +27,11 @@ def test_matrix_vector_multiplication():
 
     partials_error = example.sim.check_partials(includes=['comp_MatVec'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_matrix_vector_incompatible_shapes():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_matvec_matrix_vector_incompatible_shapes as example
+        import omtools.examples.invalid.ex_matvec_matrix_vector_incompatible_shapes as example

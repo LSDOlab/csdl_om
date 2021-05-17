@@ -4,7 +4,7 @@ import pytest
 
 
 def test_max_scalar():
-    import csdl_om.examples.valid.ex_max_scalar as example
+    import omtools.examples.valid.ex_max_scalar as example
 
     m = 2
     n = 3
@@ -22,12 +22,13 @@ def test_max_scalar():
 
     partials_error = example.sim.check_partials(includes=['comp_ScalarMin'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_max_axiswise():
-    import csdl_om.examples.valid.ex_max_axiswise as example
+    import omtools.examples.valid.ex_max_axiswise as example
 
     m = 2
     n = 3
@@ -45,12 +46,13 @@ def test_max_axiswise():
 
     partials_error = example.sim.check_partials(includes=['comp_AxiswiseMin'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_max_elementwise():
-    import csdl_om.examples.valid.ex_max_elementwise as example
+    import omtools.examples.valid.ex_max_elementwise as example
 
     tensor1 = np.array([[1, 5, -8], [10, -3, -5]])
     tensor2 = np.array([[2, 6, 9], [-1, 2, 4]])
@@ -60,15 +62,18 @@ def test_max_elementwise():
                                    desired_output)
 
     partials_error = example.sim.check_partials(
-        includes=['comp_ElementwiseMin'], out_stream=None, compact_print=True)
+        includes=['comp_ElementwiseMin'],
+        out_stream=None,
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_max_multi_inputs_and_axis():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_max_multi_inputs_and_axis as example
+        import omtools.examples.invalid.ex_max_multi_inputs_and_axis as example
 
 
 def test_max_inputs_not_same_size():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_max_inputs_not_same_size as example
+        import omtools.examples.invalid.ex_max_inputs_not_same_size as example

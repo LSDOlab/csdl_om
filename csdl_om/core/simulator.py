@@ -9,6 +9,7 @@ from csdl import (
     Subgraph,
 )
 from openmdao.api import Problem, Group, IndepVarComp
+from openmdao.core.constants import _DEFAULT_OUT_STREAM
 from typing import Callable, Dict, Tuple, List, Union
 from csdl_om.utils.create_std_component import create_std_component
 from csdl_om.utils.create_custom_component import create_custom_component
@@ -211,3 +212,33 @@ class Simulator:
         for name, meta in model.constraints.items():
             group.add_constraint(name, **meta)
         return group
+
+    def check_partials(
+        self,
+        out_stream=_DEFAULT_OUT_STREAM,
+        includes=None,
+        excludes=None,
+        compact_print=False,
+        abs_err_tol=1e-6,
+        rel_err_tol=1e-6,
+        method='fd',
+        step=None,
+        form='forward',
+        step_calc='abs',
+        force_dense=True,
+        show_only_incorrect=False,
+    ):
+        return self.prob.check_partials(
+            out_stream=out_stream,
+            includes=includes,
+            excludes=excludes,
+            compact_print=compact_print,
+            abs_err_tol=abs_err_tol,
+            rel_err_tol=rel_err_tol,
+            method=method,
+            step=step,
+            form=form,
+            step_calc=step_calc,
+            force_dense=force_dense,
+            show_only_incorrect=show_only_incorrect,
+        )

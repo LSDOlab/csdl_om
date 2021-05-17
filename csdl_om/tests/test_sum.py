@@ -4,7 +4,7 @@ import pytest
 
 
 def test_sum_single_vector():
-    import csdl_om.examples.valid.ex_sum_single_vector as example
+    import omtools.examples.valid.ex_sum_single_vector as example
 
     n = 3
 
@@ -18,12 +18,13 @@ def test_sum_single_vector():
     partials_error_vector_sum = example.sim.check_partials(
         includes=['comp_single_vector_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_vector_sum, atol=1.e-6, rtol=1.e-6)
 
 
 def test_sum_single_matrix():
-    import csdl_om.examples.valid.ex_sum_single_matrix as example
+    import omtools.examples.valid.ex_sum_single_matrix as example
 
     n = 3
     m = 6
@@ -38,12 +39,13 @@ def test_sum_single_matrix():
     partials_error_vector_sum = example.sim.check_partials(
         includes=['comp_single_matrix_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_vector_sum, atol=1.e-6, rtol=1.e-6)
 
 
 def test_sum_single_tensor():
-    import csdl_om.examples.valid.ex_sum_single_tensor as example
+    import omtools.examples.valid.ex_sum_single_tensor as example
 
     n = 3
     m = 4
@@ -60,12 +62,13 @@ def test_sum_single_tensor():
     partials_error_tensor_sum = example.sim.check_partials(
         includes=['comp_single_tensor_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_tensor_sum, atol=1.e-5, rtol=1.e-5)
 
 
 def test_sum_multiple_vector():
-    import csdl_om.examples.valid.ex_sum_multiple_vector as example
+    import omtools.examples.valid.ex_sum_multiple_vector as example
 
     n = 3
 
@@ -80,12 +83,13 @@ def test_sum_multiple_vector():
     partials_error_vector_sum = example.sim.check_partials(
         includes=['comp_multiple_vector_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_vector_sum, atol=1.e-6, rtol=1.e-6)
 
 
 def test_sum_multiple_matrix():
-    import csdl_om.examples.valid.ex_sum_multiple_matrix as example
+    import omtools.examples.valid.ex_sum_multiple_matrix as example
 
     n = 3
     m = 6
@@ -101,12 +105,13 @@ def test_sum_multiple_matrix():
     partials_error_matrix_sum = example.sim.check_partials(
         includes=['comp_multiple_matrix_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_matrix_sum, atol=1.e-6, rtol=1.e-6)
 
 
 def test_sum_multiple_tensor():
-    import csdl_om.examples.valid.ex_sum_multiple_tensor as example
+    import omtools.examples.valid.ex_sum_multiple_tensor as example
 
     n = 3
     m = 6
@@ -124,12 +129,13 @@ def test_sum_multiple_tensor():
     partials_error_tensor_sum = example.sim.check_partials(
         includes=['comp_multiple_tensor_sum'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_tensor_sum, atol=1.e-5, rtol=1.e-5)
 
 
 def test_sum_single_matrix_along0():
-    import csdl_om.examples.valid.ex_sum_single_matrix_along0 as example
+    import omtools.examples.valid.ex_sum_single_matrix_along0 as example
 
     n = 3
     m = 6
@@ -144,14 +150,15 @@ def test_sum_single_matrix_along0():
     partials_error_single_matrix_axis_0 = example.sim.check_partials(
         includes=['comp_single_matrix_sum_along_0'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_single_matrix_axis_0,
                           atol=1.e-6,
                           rtol=1.e-6)
 
 
 def test_sum_single_matrix_along1():
-    import csdl_om.examples.valid.ex_sum_single_matrix_along1 as example
+    import omtools.examples.valid.ex_sum_single_matrix_along1 as example
 
     n = 3
     m = 6
@@ -166,14 +173,15 @@ def test_sum_single_matrix_along1():
     partials_error_single_matrix_axis_1 = example.sim.check_partials(
         includes=['comp_single_matrix_sum_along_1'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_single_matrix_axis_1,
                           atol=1.e-6,
                           rtol=1.e-6)
 
 
 def test_sum_multiple_matrix_along0():
-    import csdl_om.examples.valid.ex_sum_multiple_matrix_along0 as example
+    import omtools.examples.valid.ex_sum_multiple_matrix_along0 as example
 
     n = 3
     m = 6
@@ -189,14 +197,15 @@ def test_sum_multiple_matrix_along0():
     partials_error_multiple_matrix_axis_0 = example.sim.check_partials(
         includes=['comp_multiple_matrix_sum_along_0'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_multiple_matrix_axis_0,
                           atol=1.e-6,
                           rtol=1.e-6)
 
 
 def test_sum_multiple_matrix_along1():
-    import csdl_om.examples.valid.ex_sum_multiple_matrix_along1 as example
+    import omtools.examples.valid.ex_sum_multiple_matrix_along1 as example
 
     n = 3
     m = 6
@@ -212,7 +221,8 @@ def test_sum_multiple_matrix_along1():
     partials_error_multiple_matrix_axis_1 = example.sim.check_partials(
         includes=['comp_multiple_matrix_sum_along_1'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error_multiple_matrix_axis_1,
                           atol=1.e-6,
                           rtol=1.e-6)

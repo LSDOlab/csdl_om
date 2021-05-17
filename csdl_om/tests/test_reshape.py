@@ -4,7 +4,7 @@ import pytest
 
 
 def test_reshape_tensor2vector():
-    import csdl_om.examples.valid.ex_reshape_tensor2_vector as example
+    import omtools.examples.valid.ex_reshape_tensor2_vector as example
 
     i = 2
     j = 3
@@ -23,12 +23,13 @@ def test_reshape_tensor2vector():
     partials_error = example.sim.check_partials(
         includes=['comp_reshape_tensor2vector'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_reshape_vector2tensor():
-    import csdl_om.examples.valid.ex_reshape_vector2_tensor as example
+    import omtools.examples.valid.ex_reshape_vector2_tensor as example
 
     i = 2
     j = 3
@@ -48,5 +49,6 @@ def test_reshape_vector2tensor():
     partials_error = example.sim.check_partials(
         includes=['comp_reshape_vector2tensor'],
         out_stream=None,
-        compact_print=True)
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)

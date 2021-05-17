@@ -4,7 +4,7 @@ import pytest
 
 
 def test_vector_vector_dot():
-    import csdl_om.examples.valid.ex_dot_vector_vector as example
+    import omtools.examples.valid.ex_dot_vector_vector as example
 
     m = 3
 
@@ -21,12 +21,13 @@ def test_vector_vector_dot():
 
     partials_error = example.sim.check_partials(includes=['comp_VecVecDot'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_tensor_tensor_first_dot():
-    import csdl_om.examples.valid.ex_dot_tensor_tensor_first as example
+    import omtools.examples.valid.ex_dot_tensor_tensor_first as example
 
     m = 3
     n = 4
@@ -48,12 +49,15 @@ def test_tensor_tensor_first_dot():
                                    desired_output)
 
     partials_error = example.sim.check_partials(
-        includes=['comp_TenTenDotFirst'], out_stream=None, compact_print=True)
+        includes=['comp_TenTenDotFirst'],
+        out_stream=None,
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-4, rtol=1.e-4)
 
 
 def test_tensor_tensor_last_dot():
-    import csdl_om.examples.valid.ex_dot_tensor_tensor_last as example
+    import omtools.examples.valid.ex_dot_tensor_tensor_last as example
 
     m = 2
     n = 4
@@ -75,20 +79,23 @@ def test_tensor_tensor_last_dot():
                                    desired_output)
 
     partials_error = example.sim.check_partials(
-        includes=['comp_TenTenDotLast'], out_stream=None, compact_print=True)
+        includes=['comp_TenTenDotLast'],
+        out_stream=None,
+        compact_print=True,
+        method='cs')
     assert_check_partials(partials_error, atol=1.e-4, rtol=1.e-4)
 
 
 def test_dot_vec_different_shapes():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_dot_vec_different_shapes as example
+        import omtools.examples.invalid.ex_dot_vec_different_shapes as example
 
 
 def test_dot_ten_different_shapes():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_dot_ten_different_shapes as example
+        import omtools.examples.invalid.ex_dot_ten_different_shapes as example
 
 
 def test_dot_wrong_axis():
     with pytest.raises(Exception):
-        import csdl_om.examples.invalid.ex_dot_ten_different_shapes as example
+        import omtools.examples.invalid.ex_dot_ten_different_shapes as example

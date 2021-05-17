@@ -4,7 +4,7 @@ import pytest
 
 
 def test_rotmat_scalar_rotX():
-    import csdl_om.examples.valid.ex_rotmat_scalar_rot_x as example
+    import omtools.examples.valid.ex_rotmat_scalar_rot_x as example
 
     c = np.cos(np.pi / 3)
     s = np.sin(np.pi / 3)
@@ -18,12 +18,13 @@ def test_rotmat_scalar_rotX():
 
     partials_error = example.sim.check_partials(includes=['comp_scalar_Rot_x'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-6, rtol=1.e-6)
 
 
 def test_rotmat_scalar_rotY():
-    import csdl_om.examples.valid.ex_rotmat_scalar_rot_y as example
+    import omtools.examples.valid.ex_rotmat_scalar_rot_y as example
 
     c = np.cos(np.pi / 3)
     s = np.sin(np.pi / 3)
@@ -36,7 +37,7 @@ def test_rotmat_scalar_rotY():
 
 
 def test_rotmat_same_radian_tensor_rotX():
-    import csdl_om.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
+    import omtools.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
@@ -58,12 +59,13 @@ def test_rotmat_same_radian_tensor_rotX():
 
     partials_error = example.sim.check_partials(includes=['comp_tensor_Rot_x'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)
 
 
 def test_rotmat_same_radian_tensor_rotX():
-    import csdl_om.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
+    import omtools.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
@@ -85,12 +87,13 @@ def test_rotmat_same_radian_tensor_rotX():
 
     partials_error = example.sim.check_partials(includes=['comp_tensor_Rot_x'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)
 
 
 def test_rotmat_diff_radian_tensor_rotX():
-    import csdl_om.examples.valid.ex_rotmat_diff_radian_tensor_rot_x as example
+    import omtools.examples.valid.ex_rotmat_diff_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
@@ -112,5 +115,6 @@ def test_rotmat_diff_radian_tensor_rotX():
 
     partials_error = example.sim.check_partials(includes=['comp_tensor_Rot_x'],
                                                 out_stream=None,
-                                                compact_print=True)
+                                                compact_print=True,
+                                                method='cs')
     assert_check_partials(partials_error, atol=1.e-5, rtol=1.e-5)
