@@ -49,12 +49,6 @@ class Simulator:
                     self.implicit_model_types,
                     model,
                 ))
-            # TODO: remove
-            from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS
-            self.prob.model.linear_solver = ScipyKrylov()
-            self.prob.model.nonlinear_solver = NewtonSolver(
-                solve_subsystems=False)
-
             self.prob.setup()
 
             # Set default values
