@@ -9,17 +9,17 @@ class ExampleWithSubsystemsBracketedScalar(ImplicitModel):
     def define(self):
         # define a subsystem (this is a very simple example)
         model = Model()
-        p = model.create_indep_var('p', val=7)
-        q = model.create_indep_var('q', val=8)
+        p = model.create_input('p', val=7)
+        q = model.create_input('q', val=8)
         r = p + q
         model.register_output('r', r)
 
         # add child system
-        self.add('R', model, promotes=['*'])
+        self.add(model, name='R', promotes=['*'])
         # declare output of child system as input to parent system
-        r = self.declare_input('r')
+        r = self.declare_variable('r')
 
-        c = self.declare_input('c', val=18)
+        c = self.declare_variable('c', val=18)
 
         # a == (3 + a - 2 * a**2)**(1 / 4)
         with self.create_model('coeff_a') as model:
@@ -27,15 +27,19 @@ class ExampleWithSubsystemsBracketedScalar(ImplicitModel):
             a.define((3 + a - 2 * a**2)**(1 / 4))
             model.nonlinear_solver = NonlinearBlockGS(iprint=0, maxiter=100)
 
-        a = self.declare_input('a')
+        a = self.declare_variable('a')
 
         with self.create_model('coeff_b') as model:
-            model.create_indep_var('b', val=-4)
+            model.create_input('b', val=-4)
 
-        b = self.declare_input('b')
+        b = self.declare_variable('b')
         y = self.create_implicit_output('y')
         z = a * y**2 + b * y + c - r
-        y.define_residual_bracketed(z, x1=0, x2=2)
+        # y.define_residual_bracketed(z, x1=0, x2=2)
+        y.define_residual_bracketed(z, x1=2, x2=np.pi)
+        self.linear_solver = ScipyKrylov()
+        self.nonlinear_solver = NewtonSolver(solve_subsystems=False)
+        # self.nonlinear_solver = NonlinearBlockGS()
 
 
 sim = Simulator(ExampleWithSubsystemsBracketedScalar())

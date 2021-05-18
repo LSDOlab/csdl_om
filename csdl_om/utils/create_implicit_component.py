@@ -4,7 +4,7 @@ from csdl import Output
 from networkx.algorithms.core import k_core
 from openmdao.api import ImplicitComponent
 import numpy as np
-from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS
+from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS, LinearRunOnce, NonlinearRunOnce
 
 
 def create_implicit_component(
@@ -29,6 +29,8 @@ def create_implicit_component(
         res_out_map = implicit_model.res_out_map
         out_in_map = implicit_model.out_in_map
         brackets_map = implicit_model.brackets_map
+        ls = None
+        ns = None
 
         def initialize(comp):
             comp.options.declare('maxiter', types=int, default=100)
@@ -115,7 +117,6 @@ def create_implicit_component(
                 if implicit_model.visualize is True:
                     comp.sim.visualize_model()
 
-        # done
         def apply_nonlinear(comp, inputs, outputs, residuals):
             comp._set_values(inputs, outputs)
             comp.sim.run()
@@ -124,15 +125,12 @@ def create_implicit_component(
                 residuals[implicit_output.name] = np.array(
                     comp.sim[residual_name])
 
-        # done
         def solve_nonlinear(comp, inputs, outputs):
             for residual in residuals:
                 implicit_output_name = res_out_map[residual.name].name
                 shape = residual.shape
 
                 if brackets_map is not None:
-                    bm0 = brackets_map[0]
-                    bm1 = brackets_map[1]
                     x1 = brackets_map[0][implicit_output_name] * np.ones(shape)
                     x2 = brackets_map[1][implicit_output_name] * np.ones(shape)
                     r1 = comp._run_internal_model(
@@ -173,7 +171,6 @@ def create_implicit_component(
 
                     outputs[implicit_output_name] = 0.5 * xp + 0.5 * xn
 
-        # done
         def linearize(comp, inputs, outputs, jacobian):
             comp._set_values(inputs, outputs)
 
@@ -206,7 +203,6 @@ def create_implicit_component(
                                             implicit_output_name]).reshape(
                                                 residual.shape)
 
-        # done
         def solve_linear(comp, d_outputs, d_residuals, mode):
             for implicit_output in res_out_map.values():
                 implicit_output_name = implicit_output.name
@@ -221,6 +217,11 @@ def create_implicit_component(
         # Define new ImplicitComponent
         component_class_name = 'CustomImplicitComponent' + str(
             implicit_model._count)
+
+        if implicit_model.linear_solver is not None:
+            ls = implicit_model.linear_solver
+        if implicit_model.nonlinear_solver is not None:
+            ns = implicit_model.nonlinear_solver
         u = type(
             component_class_name,
             (ImplicitComponent, ),
@@ -233,10 +234,13 @@ def create_implicit_component(
                 solve_linear=solve_linear,
                 _set_values=_set_values,
                 _run_internal_model=_run_internal_model,
-                linear_solver=ScipyKrylov(),
-                nonlinear_solver=NewtonSolver(solve_subsystems=False),
             ),
         )
         implicit_model_types[t] = u
 
-    return implicit_model_types[t]()
+    implicit_component = implicit_model_types[t]()
+    if ls is not None:
+        implicit_component.linear_solver = ls
+    if ns is not None:
+        implicit_component.nonlinear_solver = ns
+    return implicit_component
