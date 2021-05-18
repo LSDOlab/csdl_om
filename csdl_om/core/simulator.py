@@ -104,6 +104,10 @@ class Simulator:
 
         # Build system from IR
         group = Group()
+        if model.linear_solver is not None:
+            group._linear_solver = model.linear_solver
+        if model.nonlinear_solver is not None:
+            group._nonlinear_solver = model.nonlinear_solver
 
         # OpenMDAO represents top level system inputs using the concept
         # of an independent variable, so we add an independent variable
