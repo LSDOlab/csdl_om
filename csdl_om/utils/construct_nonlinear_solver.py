@@ -1,8 +1,10 @@
 from csdl_om.utils.set_recording_options import set_recording_options
 from csdl.solvers.nonlinear_solver import NonlinearSolver
+from csdl.solvers.nonlinear.newton import NewtonSolver
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.linesearch.backtracking import LinesearchSolver, BoundsEnforceLS, ArmijoGoldsteinLS
+from openmdao.solvers.nonlinear.newton import NewtonSolver as OMNewtonSolver
 from openmdao.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS as OMNonlinearBlockGS
 from openmdao.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac as OMNonlinearBlockJac
 from openmdao.solvers.linesearch.backtracking import LinesearchSolver as OMLinesearchSolver
@@ -34,10 +36,17 @@ def construct_nonlinear_solver(solver):
     s.options['iprint'] = solver.options['iprint']
     s.options['maxiter'] = solver.options['maxiter']
     s.options['rtol'] = solver.options['rtol']
+
     if isinstance(solver, NonlinearSolver):
         s.options['debug_print'] = solver.options['debug_print']
         s.options['stall_limit'] = solver.options['stall_limit']
         s.options['stall_tol'] = solver.options['stall_tol']
+    if isinstance(solver, NewtonSolver):
+        s.options['cs_reconverge'] = solver.options['cs_reconverge']
+        s.options['max_sub_solves'] = solver.options['max_sub_solves']
+        s.options['reraise_child_analysiserror'] = solver.options[
+            'reraise_child_analysiserror']
+        s.options['solve_subsystems'] = solver.options['solve_subsystems']
     if isinstance(solver, NonlinearBlockGS):
         s.options['use_aitken'] = solver.options['use_aitken']
         s.options['aitken_initial_factor'] = solver.options[

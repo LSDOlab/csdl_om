@@ -48,11 +48,13 @@ from csdl_om.comps.cotanhcomp import CotanhComp
 from csdl.operations.linear_combination import linear_combination
 from csdl.operations.power_combination import power_combination
 from csdl.operations.passthrough import passthrough
+from csdl.operations.print_var import print_var
 from csdl.operations.indexed_passthrough import indexed_passthrough
 from csdl.operations.decompose import decompose
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
+from csdl_om.comps.print_variable import PrintVariable
 from csdl_om.comps.indexed_pass_through import IndexedPassThrough
 from csdl_om.comps.decompose import Decompose
 
@@ -77,6 +79,14 @@ op_comp_map[opclass] = lambda op: PowerCombination(
     coeff=op.literals['coeff'],
     powers=op.literals['powers'],
     in_vals=[dep.val for dep in op.dependencies],
+)
+
+opclass = print_var
+op_comp_map[opclass] = lambda op: PrintVariable(
+    in_name=op.dependencies[0].name,
+    out_name=op.dependencies[0].name + '_print',
+    shape=op.dependencies[0].shape,
+    val=op.dependencies[0].val,
 )
 
 opclass = passthrough
