@@ -1,3 +1,4 @@
+from csdl_om.utils.set_recording_options import set_recording_options
 from csdl.solvers.nonlinear_solver import NonlinearSolver
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
@@ -24,6 +25,8 @@ def construct_nonlinear_solver(solver):
         s = OMBoundsEnforceLS()
     if isinstance(solver, ArmijoGoldsteinLS):
         s = OMArmijoGoldsteinLS()
+
+    set_recording_options(s, solver)
 
     # Set OpenMDAO solver options
     s.options['atol'] = solver.options['atol']

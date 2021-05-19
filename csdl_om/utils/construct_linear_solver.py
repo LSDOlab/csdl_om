@@ -1,3 +1,4 @@
+from csdl_om.utils.set_recording_options import set_recording_options
 from csdl.solvers.linear_solver import LinearSolver
 from csdl.solvers.linear.direct import DirectSolver
 from csdl.solvers.linear.linear_block_gs import LinearBlockGS
@@ -34,6 +35,8 @@ def construct_linear_solver(solver):
         s = OMScipyKrylov()
     # if isinstance(solver, LinearUserDefined):
     # s = OMLinearUserDefined()
+
+    set_recording_options(s, solver)
 
     # Set OpenMDAO solver options
     s.options['atol'] = solver.options['atol']
