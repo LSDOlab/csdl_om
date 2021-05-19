@@ -14,6 +14,8 @@ from typing import Callable, Dict, Tuple, List, Union
 from csdl_om.utils.create_std_component import create_std_component
 from csdl_om.utils.create_custom_component import create_custom_component
 from csdl_om.utils.create_implicit_component import create_implicit_component
+from csdl_om.utils.construct_linear_solver import construct_linear_solver
+from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 
 
 class Simulator:
@@ -99,9 +101,10 @@ class Simulator:
         # Build system from IR
         group = Group()
         if model.linear_solver is not None:
-            group._linear_solver = model.linear_solver
+            group._linear_solver = construct_linear_solver(model.linear_solver)
         if model.nonlinear_solver is not None:
-            group._nonlinear_solver = model.nonlinear_solver
+            group._nonlinear_solver = construct_nonlinear_solver(
+                model.nonlinear_solver)
 
         # OpenMDAO represents top level system inputs using the concept
         # of an independent variable, so we add an independent variable
