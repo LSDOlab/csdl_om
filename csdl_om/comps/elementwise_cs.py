@@ -17,10 +17,8 @@ class ElementwiseCS(ExplicitComponent):
         shape = self.options['shape']
         in_vals = self.options['in_vals']
 
-        print('cs out_name', out_name)
         self.add_output(out_name, shape=shape)
         for in_name, in_val in zip(in_names, in_vals):
-            print('cs in_name', in_name)
             self.add_input(in_name, shape=shape, val=in_val)
 
         indices = np.arange(np.prod(shape))
