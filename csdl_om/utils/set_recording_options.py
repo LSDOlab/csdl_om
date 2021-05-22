@@ -13,8 +13,6 @@ def set_recording_options(s, solver):
         'record_abs_error']
     s.recording_options['record_inputs'] = solver.recording_options[
         'record_inputs']
-    s.recording_options['record_metadata'] = solver.recording_options[
-        'record_metadata']
     s.recording_options['record_outputs'] = solver.recording_options[
         'record_outputs']
     s.recording_options['record_rel_error'] = solver.recording_options[
