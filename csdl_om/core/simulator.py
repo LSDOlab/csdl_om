@@ -46,7 +46,10 @@ class Simulator:
             for in_var in model.inputs:
                 self.prob[in_var.name] = in_var.val
             for var in model.variables:
-                self.prob[var.name] = var.val
+                try:
+                    self.prob[var.name] = var.val
+                except:
+                    pass
         elif isinstance(model, ImplicitModel):
             self.prob = Problem(
                 create_implicit_component(
