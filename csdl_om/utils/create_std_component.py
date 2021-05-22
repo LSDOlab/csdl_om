@@ -122,7 +122,6 @@ op_comp_map[opclass] = lambda op: ElementwiseCS(
     in_vals=[d.val for d in op.dependencies],
     shape=op.outs[0].shape,
     compute_string=op.compute_string,
-    compute_derivs=op.compute_derivs,
 )
 
 # Exponential and Logarithmic Functions
