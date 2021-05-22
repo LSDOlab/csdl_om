@@ -51,12 +51,14 @@ from csdl.operations.passthrough import passthrough
 from csdl.operations.print_var import print_var
 from csdl.operations.indexed_passthrough import indexed_passthrough
 from csdl.operations.decompose import decompose
+from csdl.operations.combined import combined
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
 from csdl_om.comps.print_variable import PrintVariable
 from csdl_om.comps.indexed_pass_through import IndexedPassThrough
 from csdl_om.comps.decompose import Decompose
+from csdl_om.comps.elementwise_cs import ElementwiseCS
 
 op_comp_map = dict()
 
@@ -111,6 +113,16 @@ op_comp_map[opclass] = lambda op: Decompose(
     src_indices=op.src_indices,
     shape=op.dependencies[0].shape,
     val=op.dependencies[0].val,
+)
+
+opclass = combined
+op_comp_map[opclass] = lambda op: ElementwiseCS(
+    out_name=op.outs[0].name,
+    in_names=[d.name for d in op.dependencies],
+    in_vals=[d.val for d in op.dependencies],
+    shape=op.outs[0].shape,
+    compute_string=op.compute_string,
+    compute_derivs=op.compute_derivs,
 )
 
 # Exponential and Logarithmic Functions

@@ -45,6 +45,8 @@ class Simulator:
             # Set default values
             for in_var in model.inputs:
                 self.prob[in_var.name] = in_var.val
+            for var in model.variables:
+                self.prob[var.name] = var.val
         elif isinstance(model, ImplicitModel):
             self.prob = Problem(
                 create_implicit_component(
@@ -60,6 +62,8 @@ class Simulator:
             inputs = list(set(inputs))
             for in_var in inputs:
                 self.prob[in_var.name] = in_var.val
+            for var in model.variables:
+                self.prob[var.name] = var.val
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
