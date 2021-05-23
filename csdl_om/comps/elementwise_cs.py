@@ -9,6 +9,7 @@ class ElementwiseCS(ExplicitComponent):
         self.options.declare('shape', types=tuple)
         self.options.declare('in_vals', types=list)
         self.options.declare('compute_string', types=str)
+        self.options.declare('step', types=float, default=1e-40)
 
     def setup(self):
         in_names = self.options['in_names']
@@ -40,12 +41,13 @@ class ElementwiseCS(ExplicitComponent):
         in_names = self.options['in_names']
         out_name = self.options['out_name']
         compute_string = self.options['compute_string']
+        step = self.options['step']
 
         for in_name in in_names:
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
         for in_name in in_names:
-            exec('{}=inputs[\'{}\']+1j*{}'.format(in_name, in_name, 1e-40))
+            exec('{}=inputs[\'{}\']+1j*{}'.format(in_name, in_name, step))
             exec(compute_string)
-            exec('partials[\'{}\',\'{}\']=({}).imag/1e-40'.format(
-                out_name, in_name, out_name))
+            exec('partials[\'{}\',\'{}\']=({}).imag/{}'.format(
+                out_name, in_name, out_name, step))
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
