@@ -2,20 +2,20 @@ import numpy as np
 
 from openmdao.api import ExplicitComponent
 
-from csdl_om.utils.get_array_indices import get_array_indices
-from csdl_om.utils.decompose_shape_tuple import decompose_shape_tuple
+from csdl.utils.get_array_indices import get_array_indices
+from csdl.utils.decompose_shape_tuple import decompose_shape_tuple
 
 
 class ArrayExpansionComp(ExplicitComponent):
     def initialize(self):
-        self.options.declare('shape', types=tuple)
+        self.options.declare('out_shape', types=tuple)
         self.options.declare('expand_indices', types=list)
         self.options.declare('in_name', types=str)
         self.options.declare('out_name', types=str)
         self.options.declare('val', types=np.ndarray)
 
     def setup(self):
-        shape = self.options['shape']
+        out_shape = self.options['out_shape']
         expand_indices = self.options['expand_indices']
         in_name = self.options['in_name']
         out_name = self.options['out_name']
@@ -27,8 +27,7 @@ class ArrayExpansionComp(ExplicitComponent):
             out_string,
             in_shape,
             ones_shape,
-            out_shape,
-        ) = decompose_shape_tuple(shape, expand_indices)
+        ) = decompose_shape_tuple(out_shape, expand_indices)
 
         einsum_string = '{},{}->{}'.format(in_string, ones_string, out_string)
 
