@@ -55,6 +55,7 @@ from csdl.operations.combined import combined
 from csdl.operations.matmat import matmat
 from csdl.operations.matvec import matvec
 from csdl.operations.pnorm import pnorm
+from csdl.operations.transpose import transpose
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -70,6 +71,7 @@ from csdl_om.comps.matmat_comp import MatMatComp
 from csdl_om.comps.matvec_comp import MatVecComp
 from csdl_om.comps.vectorized_pnorm_comp import VectorizedPnormComp
 from csdl_om.comps.vectorized_axiswise_pnorm_comp import VectorizedAxisWisePnormComp
+from csdl_om.comps.transpose_comp import TransposeComp
 
 import numpy as np
 
@@ -349,6 +351,15 @@ op_comp_map[opclass] = lambda op: VectorizedPnormComp(
     out_name=op.outs[0].name,
     pnorm_type=op.literals['pnorm_type'],
     axis=op.literals['axis'],
+    val=op.dependencies[0].val,
+)
+
+opclass = transpose
+op_comp_map[opclass] = lambda op: TransposeComp(
+    in_name=op.dependencies[0].name,
+    in_shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
     val=op.dependencies[0].val,
 )
 

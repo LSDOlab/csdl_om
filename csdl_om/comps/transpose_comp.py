@@ -58,18 +58,21 @@ if __name__ == '__main__':
     import time
 
     shape = (2, 7, 4)
+    # shape = (1, )
+    val = np.random.rand(*shape)
 
     prob = Problem()
 
     comp = IndepVarComp()
-    comp.add_output('x', np.random.rand(*shape))
+    comp.add_output('x', val=val)
 
     prob.model.add_subsystem('input_comp', comp, promotes=['*'])
 
     comp = TransposeComp(
         in_name='x',
-        in_shape=(2, 7, 4),
+        in_shape=shape,
         out_name='f',
+        val=val,
     )
 
     prob.model.add_subsystem('comp', comp, promotes=['*'])
