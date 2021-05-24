@@ -52,6 +52,8 @@ from csdl.operations.print_var import print_var
 from csdl.operations.indexed_passthrough import indexed_passthrough
 from csdl.operations.decompose import decompose
 from csdl.operations.combined import combined
+from csdl.operations.matmat import matmat
+from csdl.operations.matvec import matvec
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -60,9 +62,11 @@ from csdl_om.comps.indexed_pass_through import IndexedPassThrough
 from csdl_om.comps.decompose import Decompose
 from csdl_om.comps.elementwise_cs import ElementwiseCS
 
-from csdl.operations.expand import expand
-from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
-from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
+# from csdl.operations.expand import expand
+# from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
+# from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
+from csdl_om.comps.matmat_comp import MatMatComp
+from csdl_om.comps.matvec_comp import MatVecComp
 
 op_comp_map = dict()
 
@@ -325,21 +329,78 @@ op_comp_map[opclass] = lambda op: CotanhComp(
 #     val=op.dependencies[0].val,
 # )
 
-# Array Components
+# Linear Algebra Components
 
-opclass = expand
-op_comp_map[opclass] = lambda op: ArrayExpansionComp(
-    out_shape=op.outs[0].shape,
-    expand_indices=op.literals['expand_indices'],
-    in_name=op.dependencies[0].name,
+opclass = matvec
+op_comp_map[opclass] = lambda op: MatVecComp(
+    in_names=[var.name for var in op.dependencies],
     out_name=op.outs[0].name,
-    val=op.dependencies[0].val,
-) if (op.dependencies[0].shape != (1, )) else ScalarExpansionComp(
-    out_shape=op.outs[0].shape,
-    in_name=op.dependencies[0].name,
-    out_name=op.outs[0].name,
-    val=op.dependencies[0].val,
+    in_shapes=[var.shape for var in op.dependencies],
+    in_vals=[var.val for var in op.dependencies],
 )
+
+opclass = matmat
+op_comp_map[opclass] = lambda op: MatMatComp(
+    in_names=[var.name for var in op.dependencies],
+    out_name=op.outs[0].name,
+    in_shapes=[var.shape for var in op.dependencies],
+    in_vals=[var.val for var in op.dependencies],
+)
+
+# # Array Components
+# lambda op:
+# SingleTensorSumComp(
+#                 in_name=summands[0].name,
+#                 shape=summands[0].shape,
+#                 out_name=out.name,
+#                 val=summands[0].val,
+#             )
+#     if axes is None:
+#         if len(summands) == 1:
+#         else:
+#             out.shape = expr.shape
+#             out.build = lambda: MultipleTensorSumComp(
+#                 in_names=[expr.name for expr in summands],
+#                 shape=expr.shape,
+#                 out_name=out.name,
+#                 vals=[expr.val for expr in summands],
+#             )
+#     else:
+#         output_shape = np.delete(expr.shape, axes)
+#         out.shape = tuple(output_shape)
+
+#         if len(summands) == 1:
+#             out.build = lambda: SingleTensorSumComp(
+#                 in_name=expr.name,
+#                 shape=expr.shape,
+#                 out_name=out.name,
+#                 out_shape=out.shape,
+#                 axes=axes,
+#                 val=summands[0].val,
+#             )
+#         else:
+#             out.build = lambda: MultipleTensorSumComp(
+#                 in_names=[expr.name for expr in summands],
+#                 shape=expr.shape,
+#                 out_name=out.name,
+#                 out_shape=out.shape,
+#                 axes=axes,
+#                 vals=[expr.val for expr in summands],
+#             )
+
+# opclass = expand
+# op_comp_map[opclass] = lambda op: ArrayExpansionComp(
+#     out_shape=op.outs[0].shape,
+#     expand_indices=op.literals['expand_indices'],
+#     in_name=op.dependencies[0].name,
+#     out_name=op.outs[0].name,
+#     val=op.dependencies[0].val,
+# ) if (op.dependencies[0].shape != (1, )) else ScalarExpansionComp(
+#     out_shape=op.outs[0].shape,
+#     in_name=op.dependencies[0].name,
+#     out_name=op.outs[0].name,
+#     val=op.dependencies[0].val,
+# )
 
 
 def create_std_component(op: StandardOperation):
