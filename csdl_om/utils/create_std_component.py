@@ -59,6 +59,7 @@ from csdl.operations.transpose import transpose
 from csdl.operations.inner import inner
 from csdl.operations.outer import outer
 from csdl.operations.dot import dot
+from csdl.operations.cross import cross
 from csdl.operations.einsum import einsum
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
@@ -83,6 +84,7 @@ from csdl_om.comps.tensor_outer_product_comp import TensorOuterProductComp
 from csdl_om.comps.einsum_comp_dense_derivs import EinsumComp
 from csdl_om.comps.einsum_comp_sparse_derivs import SparsePartialEinsumComp
 from csdl_om.comps.tensor_dot_product_comp import TensorDotProductComp
+from csdl_om.comps.cross_product_comp import CrossProductComp
 
 import numpy as np
 
@@ -451,6 +453,17 @@ op_comp_map[opclass] = lambda op: VectorInnerProductComp(
     axis=op.literals['axis'],
     out_shape=op.outs[0].shape,
     in_vals=[var.val for var in op.dependencies],
+)
+
+opclass = cross
+op_comp_map[opclass] = lambda op: CrossProductComp(
+    shape=op.outs[0].shape,
+    in1_name=op.dependencies[0].name,
+    in2_name=op.dependencies[1].name,
+    out_name=op.outs[0].name,
+    axis=op.literals['axis'],
+    in1_val=op.dependencies[0].val,
+    in2_val=op.dependencies[1].val,
 )
 
 # lambda op:
