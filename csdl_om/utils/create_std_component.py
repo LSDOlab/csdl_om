@@ -54,6 +54,7 @@ from csdl.operations.decompose import decompose
 from csdl.operations.combined import combined
 from csdl.operations.matmat import matmat
 from csdl.operations.matvec import matvec
+from csdl.operations.pnorm import pnorm
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -67,6 +68,10 @@ from csdl_om.comps.elementwise_cs import ElementwiseCS
 # from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
 from csdl_om.comps.matmat_comp import MatMatComp
 from csdl_om.comps.matvec_comp import MatVecComp
+from csdl_om.comps.vectorized_pnorm_comp import VectorizedPnormComp
+from csdl_om.comps.vectorized_axiswise_pnorm_comp import VectorizedAxisWisePnormComp
+
+import numpy as np
 
 op_comp_map = dict()
 
@@ -330,6 +335,22 @@ op_comp_map[opclass] = lambda op: CotanhComp(
 # )
 
 # Linear Algebra Components
+opclass = pnorm
+op_comp_map[opclass] = lambda op: VectorizedPnormComp(
+    shape=op.outs[0].shape,
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    pnorm_type=op.literals['pnorm_type'],
+    val=op.dependencies[0].val,
+) if op.literals['axis'] == None else VectorizedAxisWisePnormComp(
+    shape=op.outs[0].shape,
+    in_name=op.dependencies[0].name,
+    out_shape=tuple(np.delete(op.dependencies[0].shape, op.literals['axis'])),
+    out_name=op.outs[0].name,
+    pnorm_type=op.literals['pnorm_type'],
+    axis=op.literals['axis'],
+    val=op.dependencies[0].val,
+)
 
 opclass = matvec
 op_comp_map[opclass] = lambda op: MatVecComp(
