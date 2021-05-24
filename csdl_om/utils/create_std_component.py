@@ -70,9 +70,9 @@ from csdl_om.comps.indexed_pass_through import IndexedPassThrough
 from csdl_om.comps.decompose import Decompose
 from csdl_om.comps.elementwise_cs import ElementwiseCS
 
-# from csdl.operations.expand import expand
-# from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
-# from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
+from csdl.operations.expand import expand
+from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
+from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
 from csdl_om.comps.matmat_comp import MatMatComp
 from csdl_om.comps.matvec_comp import MatVecComp
 from csdl_om.comps.vectorized_pnorm_comp import VectorizedPnormComp
@@ -517,19 +517,19 @@ op_comp_map[opclass] = lambda op: RotationMatrixComp(
 #                 vals=[expr.val for expr in summands],
 #             )
 
-# opclass = expand
-# op_comp_map[opclass] = lambda op: ArrayExpansionComp(
-#     out_shape=op.outs[0].shape,
-#     expand_indices=op.literals['expand_indices'],
-#     in_name=op.dependencies[0].name,
-#     out_name=op.outs[0].name,
-#     val=op.dependencies[0].val,
-# ) if (op.dependencies[0].shape != (1, )) else ScalarExpansionComp(
-#     out_shape=op.outs[0].shape,
-#     in_name=op.dependencies[0].name,
-#     out_name=op.outs[0].name,
-#     val=op.dependencies[0].val,
-# )
+opclass = expand
+op_comp_map[opclass] = lambda op: ArrayExpansionComp(
+    out_shape=op.outs[0].shape,
+    expand_indices=op.literals['expand_indices'],
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+) if (op.dependencies[0].shape != (1, )) else ScalarExpansionComp(
+    out_shape=op.outs[0].shape,
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+)
 
 
 def create_std_component(op: StandardOperation):
