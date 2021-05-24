@@ -58,6 +58,7 @@ from csdl.operations.pnorm import pnorm
 from csdl.operations.transpose import transpose
 from csdl.operations.inner import inner
 from csdl.operations.outer import outer
+from csdl.operations.einsum import einsum
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -78,6 +79,8 @@ from csdl_om.comps.vector_inner_product_comp import VectorInnerProductComp
 from csdl_om.comps.tensor_inner_product_comp import TensorInnerProductComp
 from csdl_om.comps.vector_outer_product_comp import VectorOuterProductComp
 from csdl_om.comps.tensor_outer_product_comp import TensorOuterProductComp
+from csdl_om.comps.einsum_comp_dense_derivs import EinsumComp
+from csdl_om.comps.einsum_comp_sparse_derivs import SparsePartialEinsumComp
 
 import numpy as np
 
@@ -414,6 +417,23 @@ op_comp_map[opclass] = lambda op: VectorOuterProductComp(
         in_shapes=[var.shape for var in op.dependencies],
         in_vals=[var.val for var in op.dependencies],
     )
+
+opclass = einsum
+op_comp_map[opclass] = lambda op: EinsumComp(
+    in_names=[var.name for var in op.dependencies],
+    in_shapes=[var.shape for var in op.dependencies],
+    out_name=op.outs[0].name,
+    operation=op.literals['subscripts'],
+    out_shape=op.outs[0].shape,
+    in_vals=[var.val for var in op.dependencies],
+) if op.literals['partial_format'] == 'dense' else SparsePartialEinsumComp(
+    in_names=[var.name for var in op.dependencies],
+    in_shapes=[var.shape for var in op.dependencies],
+    out_name=op.outs[0].name,
+    operation=op.literals['subscripts'],
+    out_shape=op.outs[0].shape,
+    in_vals=[var.val for var in op.dependencies],
+)
 
 # # Array Components
 # lambda op:
