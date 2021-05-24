@@ -61,6 +61,7 @@ from csdl.operations.outer import outer
 from csdl.operations.dot import dot
 from csdl.operations.cross import cross
 from csdl.operations.einsum import einsum
+from csdl.operations.rotmat import rotmat
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -85,6 +86,7 @@ from csdl_om.comps.einsum_comp_dense_derivs import EinsumComp
 from csdl_om.comps.einsum_comp_sparse_derivs import SparsePartialEinsumComp
 from csdl_om.comps.tensor_dot_product_comp import TensorDotProductComp
 from csdl_om.comps.cross_product_comp import CrossProductComp
+from csdl_om.comps.rotation_matrix_comp import RotationMatrixComp
 
 import numpy as np
 
@@ -439,7 +441,8 @@ op_comp_map[opclass] = lambda op: EinsumComp(
     in_vals=[var.val for var in op.dependencies],
 )
 
-# # Array Components
+# Vector Algebra
+
 opclass = dot
 op_comp_map[opclass] = lambda op: VectorInnerProductComp(
     in_names=[var.name for var in op.dependencies],
@@ -466,6 +469,14 @@ op_comp_map[opclass] = lambda op: CrossProductComp(
     in2_val=op.dependencies[1].val,
 )
 
+opclass = rotmat
+op_comp_map[opclass] = lambda op: RotationMatrixComp(
+    shape=op.dependencies[0].shape,
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    axis=op.literals['axis'],
+    val=op.dependencies[0].val,
+)
 # lambda op:
 # SingleTensorSumComp(
 #                 in_name=summands[0].name,
