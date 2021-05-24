@@ -58,6 +58,7 @@ from csdl.operations.pnorm import pnorm
 from csdl.operations.transpose import transpose
 from csdl.operations.inner import inner
 from csdl.operations.outer import outer
+from csdl.operations.dot import dot
 from csdl.operations.einsum import einsum
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
@@ -81,6 +82,7 @@ from csdl_om.comps.vector_outer_product_comp import VectorOuterProductComp
 from csdl_om.comps.tensor_outer_product_comp import TensorOuterProductComp
 from csdl_om.comps.einsum_comp_dense_derivs import EinsumComp
 from csdl_om.comps.einsum_comp_sparse_derivs import SparsePartialEinsumComp
+from csdl_om.comps.tensor_dot_product_comp import TensorDotProductComp
 
 import numpy as np
 
@@ -436,6 +438,21 @@ op_comp_map[opclass] = lambda op: EinsumComp(
 )
 
 # # Array Components
+opclass = dot
+op_comp_map[opclass] = lambda op: VectorInnerProductComp(
+    in_names=[var.name for var in op.dependencies],
+    out_name=op.outs[0].name,
+    in_shape=op.dependencies[0].shape[0],
+    in_vals=[var.val for var in op.dependencies],
+) if len(op.dependencies[0].shape) == 1 else TensorDotProductComp(
+    in_names=[var.name for var in op.dependencies],
+    out_name=op.outs[0].name,
+    in_shape=op.dependencies[0].shape,
+    axis=op.literals['axis'],
+    out_shape=op.outs[0].shape,
+    in_vals=[var.val for var in op.dependencies],
+)
+
 # lambda op:
 # SingleTensorSumComp(
 #                 in_name=summands[0].name,
