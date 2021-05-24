@@ -56,6 +56,7 @@ from csdl.operations.matmat import matmat
 from csdl.operations.matvec import matvec
 from csdl.operations.pnorm import pnorm
 from csdl.operations.transpose import transpose
+from csdl.operations.inner import inner
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -72,6 +73,8 @@ from csdl_om.comps.matvec_comp import MatVecComp
 from csdl_om.comps.vectorized_pnorm_comp import VectorizedPnormComp
 from csdl_om.comps.vectorized_axiswise_pnorm_comp import VectorizedAxisWisePnormComp
 from csdl_om.comps.transpose_comp import TransposeComp
+from csdl_om.comps.vector_inner_product_comp import VectorInnerProductComp
+from csdl_om.comps.tensor_inner_product_comp import TensorInnerProductComp
 
 import numpy as np
 
@@ -378,6 +381,22 @@ op_comp_map[opclass] = lambda op: MatMatComp(
     in_shapes=[var.shape for var in op.dependencies],
     in_vals=[var.val for var in op.dependencies],
 )
+
+opclass = inner
+op_comp_map[opclass] = lambda op: VectorInnerProductComp(
+    in_names=[var.name for var in op.dependencies],
+    out_name=op.outs[0].name,
+    in_shape=op.dependencies[0].shape[0],
+    in_vals=[var.val for var in op.dependencies],
+) if len(op.dependencies[0].shape) == 1 and len(op.dependencies[
+    1].shape) == 1 else TensorInnerProductComp(
+        in_names=[var.name for var in op.dependencies],
+        out_name=op.outs[0].name,
+        in_shapes=[var.shape for var in op.dependencies],
+        axes=op.literals['axes'],
+        out_shape=op.outs[0].shape,
+        in_vals=[var.val for var in op.dependencies],
+    )
 
 # # Array Components
 # lambda op:
