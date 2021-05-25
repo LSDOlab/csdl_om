@@ -62,7 +62,9 @@ from csdl.operations.dot import dot
 from csdl.operations.cross import cross
 from csdl.operations.einsum import einsum
 from csdl.operations.rotmat import rotmat
+from csdl.operations.expand import expand
 from csdl.operations.reshape import reshape
+from csdl.operations.reorder_axes import reorder_axes
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -71,7 +73,6 @@ from csdl_om.comps.indexed_pass_through import IndexedPassThrough
 from csdl_om.comps.decompose import Decompose
 from csdl_om.comps.elementwise_cs import ElementwiseCS
 
-from csdl.operations.expand import expand
 from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
 from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
 from csdl_om.comps.matmat_comp import MatMatComp
@@ -89,6 +90,7 @@ from csdl_om.comps.tensor_dot_product_comp import TensorDotProductComp
 from csdl_om.comps.cross_product_comp import CrossProductComp
 from csdl_om.comps.rotation_matrix_comp import RotationMatrixComp
 from csdl_om.comps.reshape_comp import ReshapeComp
+from csdl_om.comps.reorder_axes_comp import ReorderAxesComp
 
 import numpy as np
 
@@ -541,6 +543,17 @@ op_comp_map[opclass] = lambda op: ReshapeComp(
     in_name=op.dependencies[0].name,
     out_name=op.outs[0].name,
     new_shape=op.outs[0].shape,
+    val=op.dependencies[0].val,
+)
+
+opclass = reorder_axes
+op_comp_map[opclass] = lambda op: ReorderAxesComp(
+    in_name=op.dependencies[0].name,
+    in_shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
+    operation=op.literals['operation'],
+    new_axes_locations=op.literals['new_axes_locations'],
     val=op.dependencies[0].val,
 )
 
