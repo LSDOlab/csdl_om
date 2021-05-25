@@ -65,6 +65,7 @@ from csdl.operations.rotmat import rotmat
 from csdl.operations.expand import expand
 from csdl.operations.reshape import reshape
 from csdl.operations.reorder_axes import reorder_axes
+from csdl.operations.sum import sum
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -91,6 +92,9 @@ from csdl_om.comps.cross_product_comp import CrossProductComp
 from csdl_om.comps.rotation_matrix_comp import RotationMatrixComp
 from csdl_om.comps.reshape_comp import ReshapeComp
 from csdl_om.comps.reorder_axes_comp import ReorderAxesComp
+from csdl_om.comps.scalar_extremum_comp import ScalarExtremumComp
+from csdl_om.comps.single_tensor_sum_comp import SingleTensorSumComp
+from csdl_om.comps.multiple_tensor_sum_comp import MultipleTensorSumComp
 
 import numpy as np
 
@@ -556,6 +560,33 @@ op_comp_map[opclass] = lambda op: ReorderAxesComp(
     new_axes_locations=op.literals['new_axes_locations'],
     val=op.dependencies[0].val,
 )
+
+opclass = sum
+op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
+    in_name=op.dependencies[0].name,
+    shape=op.outs[0].shape,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 else MultipleTensorSumComp(
+    in_names=[var.name for var in op.dependencies],
+    shape=op.outs[0].shape,
+    out_name=op.outs[0].name,
+    vals=[var.val for var in op.dependencies],
+)) if op.literals['axes'] is None else (SingleTensorSumComp(
+    in_name=op.dependencies[0].name,
+    shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
+    axes=op.literals['axes'],
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 else MultipleTensorSumComp(
+    in_names=[var.name for var in op.dependencies],
+    shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
+    axes=op.literals['axes'],
+    vals=[var.val for var in op.dependencies],
+))
 
 
 def create_std_component(op: StandardOperation):
