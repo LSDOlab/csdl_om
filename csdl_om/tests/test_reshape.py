@@ -4,7 +4,7 @@ import pytest
 
 
 def test_reshape_tensor2vector():
-    import omtools.examples.valid.ex_reshape_tensor2_vector as example
+    import csdl_om.examples.valid.ex_reshape_tensor2_vector as example
 
     i = 2
     j = 3
@@ -29,7 +29,7 @@ def test_reshape_tensor2vector():
 
 
 def test_reshape_vector2tensor():
-    import omtools.examples.valid.ex_reshape_vector2_tensor as example
+    import csdl_om.examples.valid.ex_reshape_vector2_tensor as example
 
     i = 2
     j = 3

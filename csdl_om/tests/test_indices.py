@@ -5,16 +5,16 @@ from openmdao.utils.assert_utils import assert_check_partials
 
 def test_integer_index_assignement_overlap():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_indices_integer_overlap as example
+        import csdl_om.examples.invalid.ex_indices_integer_overlap as example
 
 
 def test_integer_index_assignement_out_of_range():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_indices_integer_out_of_range as example
+        import csdl_om.examples.invalid.ex_indices_integer_out_of_range as example
 
 
 def test_integer_index_assignement():
-    import omtools.examples.valid.ex_indices_integer as example
+    import csdl_om.examples.valid.ex_indices_integer as example
     x = np.array([0, 1, 2, 7.4, np.pi, 9, np.pi + 9])
     np.testing.assert_array_equal(example.sim['x'], x)
     np.testing.assert_array_equal(example.sim['x0'], x[0])
@@ -27,26 +27,26 @@ def test_integer_index_assignement():
 
 def test_integer_index_integer_reuse():
     with pytest.raises(KeyError):
-        import omtools.examples.invalid.ex_indices_integer_reuse as example
+        import csdl_om.examples.invalid.ex_indices_integer_reuse as example
 
 
 def test_one_dimensional_index_reuse():
     with pytest.raises(KeyError):
-        import omtools.examples.invalid.ex_indices_one_dimensional_reuse as example
+        import csdl_om.examples.invalid.ex_indices_one_dimensional_reuse as example
 
 
 def test_one_dimensional_index_assignement_overlap():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_indices_one_dimensional_overlap as example
+        import csdl_om.examples.invalid.ex_indices_one_dimensional_overlap as example
 
 
 def test_one_dimensional_index_assignement_out_of_range():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_indices_one_dimensional_out_of_range as example
+        import csdl_om.examples.invalid.ex_indices_one_dimensional_out_of_range as example
 
 
 def test_one_dimensional_index_assignement():
-    import omtools.examples.valid.ex_indices_one_dimensional as example
+    import csdl_om.examples.valid.ex_indices_one_dimensional as example
     np.testing.assert_array_equal(example.sim['u'], np.arange(20))
     np.testing.assert_array_equal(example.sim['v'], np.arange(16))
     np.testing.assert_array_equal(example.sim['w'], 16 + np.arange(4))
@@ -69,16 +69,16 @@ def test_one_dimensional_index_assignement():
 
 def test_multidimensional_dimensional_index_assignement_overlap():
     with pytest.raises(KeyError):
-        import omtools.examples.invalid.ex_indices_multidimensional_overlap as example
+        import csdl_om.examples.invalid.ex_indices_multidimensional_overlap as example
 
 
 def test_multidimensional_index_assignement_out_of_range():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_indices_multidimensional_out_of_range as example
+        import csdl_om.examples.invalid.ex_indices_multidimensional_out_of_range as example
 
 
 def test_multidimensional_dimensional_index_assignement():
-    import omtools.examples.valid.ex_indices_multidimensional as example
+    import csdl_om.examples.valid.ex_indices_multidimensional as example
     np.testing.assert_array_equal(
         example.sim['z'],
         np.arange(6).reshape((2, 3)),

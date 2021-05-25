@@ -4,7 +4,7 @@ import pytest
 
 
 def test_vector_vector_cross():
-    import omtools.examples.valid.ex_cross_vector_vector as example
+    import csdl_om.examples.valid.ex_cross_vector_vector as example
 
     vec1 = np.arange(3)
     vec2 = np.arange(3) + 1
@@ -20,7 +20,7 @@ def test_vector_vector_cross():
 
 
 def test_cross():
-    import omtools.examples.valid.ex_cross_tensor_tensor as example
+    import csdl_om.examples.valid.ex_cross_tensor_tensor as example
 
     shape = (2, 5, 4, 3)
     num_elements = np.prod(shape)
@@ -40,9 +40,9 @@ def test_cross():
 
 def test_cross_different_shapes():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_cross_different_shapes as example
+        import csdl_om.examples.invalid.ex_cross_different_shapes as example
 
 
 def test_cross_incorrect_axis_index():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_cross_incorrect_axis_index as example
+        import csdl_om.examples.invalid.ex_cross_incorrect_axis_index as example

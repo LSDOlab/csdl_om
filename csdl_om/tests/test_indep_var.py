@@ -4,7 +4,7 @@ import pytest
 
 
 def test_indep_var():
-    import omtools.examples.valid.ex_indep_var_simple as example
+    import csdl_om.examples.valid.ex_indep_var_simple as example
     np.testing.assert_approx_equal(example.sim['z'], 10.)
     result = example.sim.check_partials(out_stream=None,
                                         compact_print=True,

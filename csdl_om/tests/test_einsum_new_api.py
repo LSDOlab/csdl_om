@@ -11,7 +11,7 @@ tens = np.arange(24).reshape(shape3)
 
 
 def test_new_einsum_inner_vector_vector():
-    import omtools.examples.valid.ex_einsum_new_inner_vector_vector as example
+    import csdl_om.examples.valid.ex_einsum_new_inner_vector_vector as example
 
     desired_output1 = np.einsum('i,i->', vec, vec)
 
@@ -27,7 +27,7 @@ def test_new_einsum_inner_vector_vector():
 
 
 def test_new_einsum_inner_tensor_vector():
-    import omtools.examples.valid.ex_einsum_new_inner_tensor_vector as example
+    import csdl_om.examples.valid.ex_einsum_new_inner_tensor_vector as example
 
     desired_output2 = np.einsum('ijk,j->ik', tens, vec)
 
@@ -43,7 +43,7 @@ def test_new_einsum_inner_tensor_vector():
 
 
 def test_new_einsum_outer_vector_vector():
-    import omtools.examples.valid.ex_einsum_new_outer_vector_vector as example
+    import csdl_om.examples.valid.ex_einsum_new_outer_vector_vector as example
 
     desired_output1 = np.einsum('i,j->ij', vec, vec)
 
@@ -59,7 +59,7 @@ def test_new_einsum_outer_vector_vector():
 
 
 def test_new_einsum_outer_tensor_vector():
-    import omtools.examples.valid.ex_einsum_new_outer_tensor_vector as example
+    import csdl_om.examples.valid.ex_einsum_new_outer_tensor_vector as example
 
     desired_output2 = np.einsum('hij,k->hijk', tens, vec)
 
@@ -75,7 +75,7 @@ def test_new_einsum_outer_tensor_vector():
 
 
 def test_new_einsum_reorder_matrix():
-    import omtools.examples.valid.ex_einsum_new_reorder_matrix as example
+    import csdl_om.examples.valid.ex_einsum_new_reorder_matrix as example
 
     desired_output1 = np.einsum('ij->ji', mat)
 
@@ -91,7 +91,7 @@ def test_new_einsum_reorder_matrix():
 
 
 def test_new_einsum_reorder_tensor():
-    import omtools.examples.valid.ex_einsum_new_reorder_tensor as example
+    import csdl_om.examples.valid.ex_einsum_new_reorder_tensor as example
 
     desired_output2 = np.einsum('ijk->kji', tens)
 
@@ -107,7 +107,7 @@ def test_new_einsum_reorder_tensor():
 
 
 def test_new_einsum_vector_summation():
-    import omtools.examples.valid.ex_einsum_new_vector_summation as example
+    import csdl_om.examples.valid.ex_einsum_new_vector_summation as example
 
     desired_output1 = np.einsum('i->', vec)
 
@@ -123,7 +123,7 @@ def test_new_einsum_vector_summation():
 
 
 def test_new_einsum_tensor_summation():
-    import omtools.examples.valid.ex_einsum_new_tensor_summation as example
+    import csdl_om.examples.valid.ex_einsum_new_tensor_summation as example
 
     desired_output2 = np.einsum('ijk->', tens)
 
@@ -139,7 +139,7 @@ def test_new_einsum_tensor_summation():
 
 
 def test_new_einsum_multiplication_sum():
-    import omtools.examples.valid.ex_einsum_new_multiplication_sum as example
+    import csdl_om.examples.valid.ex_einsum_new_multiplication_sum as example
 
     desired_output1 = np.einsum('i,j->j', vec, vec)
 
@@ -155,7 +155,7 @@ def test_new_einsum_multiplication_sum():
 
 
 def test_new_einsum_multiple_vector_sum():
-    import omtools.examples.valid.ex_einsum_new_multiple_vector_sum as example
+    import csdl_om.examples.valid.ex_einsum_new_multiple_vector_sum as example
 
     desired_output2 = np.einsum('i,j->', vec, vec)
 
@@ -171,7 +171,7 @@ def test_new_einsum_multiple_vector_sum():
 
 
 def test_new_einsum_sparse_inner_vector_vector():
-    import omtools.examples.valid.ex_einsum_new_inner_vector_vector_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_inner_vector_vector_sparse as example
 
     desired_output1 = np.einsum('i,i->', vec, vec)
 
@@ -187,7 +187,7 @@ def test_new_einsum_sparse_inner_vector_vector():
 
 
 def test_new_einsum_sparse_inner_tensor_vector():
-    import omtools.examples.valid.ex_einsum_new_inner_tensor_vector_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_inner_tensor_vector_sparse as example
 
     desired_output2 = np.einsum('ijk,j->ik', tens, vec)
 
@@ -203,7 +203,7 @@ def test_new_einsum_sparse_inner_tensor_vector():
 
 
 def test_new_einsum_sparse_outer_vector_vector():
-    import omtools.examples.valid.ex_einsum_new_outer_vector_vector_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_outer_vector_vector_sparse as example
 
     desired_output1 = np.einsum('i,j->ij', vec, vec)
 
@@ -219,7 +219,7 @@ def test_new_einsum_sparse_outer_vector_vector():
 
 
 def test_new_einsum_sparse_outer_tensor_vector():
-    import omtools.examples.valid.ex_einsum_new_outer_tensor_vector_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_outer_tensor_vector_sparse as example
 
     desired_output2 = np.einsum('hij,k->hijk', tens, vec)
 
@@ -235,7 +235,7 @@ def test_new_einsum_sparse_outer_tensor_vector():
 
 
 def test_new_einsum_sparse_reorder_matrix():
-    import omtools.examples.valid.ex_einsum_new_reorder_matrix_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_reorder_matrix_sparse as example
 
     desired_output1 = np.einsum('ij->ji', mat)
 
@@ -251,7 +251,7 @@ def test_new_einsum_sparse_reorder_matrix():
 
 
 def test_new_einsum_sparse_tranpose_tensor():
-    import omtools.examples.valid.ex_einsum_new_reorder_tensor_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_reorder_tensor_sparse as example
 
     desired_output2 = np.einsum('ijk->kji', tens)
 
@@ -267,7 +267,7 @@ def test_new_einsum_sparse_tranpose_tensor():
 
 
 def test_new_einsum_sparse_summation_vector():
-    import omtools.examples.valid.ex_einsum_new_vector_summation_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_vector_summation_sparse as example
 
     desired_output1 = np.einsum('i->', vec)
 
@@ -283,7 +283,7 @@ def test_new_einsum_sparse_summation_vector():
 
 
 def test_new_einsum_sparse_summation_tensor():
-    import omtools.examples.valid.ex_einsum_new_tensor_summation_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_tensor_summation_sparse as example
 
     desired_output2 = np.einsum('ijk->', tens)
 
@@ -299,7 +299,7 @@ def test_new_einsum_sparse_summation_tensor():
 
 
 def test_new_einsum_sparse_multiplication_sum():
-    import omtools.examples.valid.ex_einsum_new_multiplication_sum_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_multiplication_sum_sparse as example
 
     desired_output1 = np.einsum('i,j->j', vec, vec)
 
@@ -315,7 +315,7 @@ def test_new_einsum_sparse_multiplication_sum():
 
 
 def test_new_einsum_sparse_multiple_vector_sum():
-    import omtools.examples.valid.ex_einsum_new_multiple_vector_sum_sparse as example
+    import csdl_om.examples.valid.ex_einsum_new_multiple_vector_sum_sparse as example
 
     desired_output2 = np.einsum('i,j->', vec, vec)
 

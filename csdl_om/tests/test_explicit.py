@@ -4,7 +4,7 @@ import pytest
 
 
 def test_literals():
-    import omtools.examples.valid.ex_explicit_literals as example
+    import csdl_om.examples.valid.ex_explicit_literals as example
     np.testing.assert_approx_equal(example.sim['y'], -3.)
     result = example.sim.check_partials(out_stream=None,
                                         compact_print=True,
@@ -13,7 +13,7 @@ def test_literals():
 
 
 def test_simple_binary():
-    import omtools.examples.valid.ex_explicit_binary_operations as example
+    import csdl_om.examples.valid.ex_explicit_binary_operations as example
     np.testing.assert_approx_equal(example.sim['y1'], 7.)
     np.testing.assert_approx_equal(example.sim['y2'], 5.)
     np.testing.assert_approx_equal(example.sim['y3'], 1.)
@@ -33,17 +33,17 @@ def test_simple_binary():
 
 
 def test_no_registered_outputs():
-    import omtools.examples.valid.ex_explicit_no_registered_output as example
+    import csdl_om.examples.valid.ex_explicit_no_registered_output as example
     np.testing.assert_approx_equal(example.sim['prod'], 24.)
     result = example.sim.check_partials(out_stream=None,
                                         compact_print=True,
                                         method='cs')
     assert_check_partials(result, atol=1.e-8, rtol=1.e-8)
-    assert len(example.sim.model._subgroups_myproc) == 1
+    assert len(example.sim.prob.model._subgroups_myproc) == 1
 
 
 def test_unary_exprs():
-    import omtools.examples.valid.ex_explicit_unary as example
+    import csdl_om.examples.valid.ex_explicit_unary as example
     x = np.pi
     y = 1
     np.testing.assert_approx_equal(example.sim['arccos'], np.arccos(y))
@@ -71,7 +71,7 @@ def test_unary_exprs():
 
 
 def test_explicit_with_subsystems():
-    import omtools.examples.valid.ex_explicit_with_subsystems as example
+    import csdl_om.examples.valid.ex_explicit_with_subsystems as example
     np.testing.assert_approx_equal(example.sim['x1'], 40.)
     np.testing.assert_approx_equal(example.sim['x2'], 12.)
     np.testing.assert_approx_equal(example.sim['y1'], 52.)
@@ -88,7 +88,7 @@ def test_explicit_with_subsystems():
 
 
 def test_explicit_cycles():
-    import omtools.examples.valid.ex_explicit_cycles as example
+    import csdl_om.examples.valid.ex_explicit_cycles as example
     np.testing.assert_approx_equal(
         example.sim['cycle_1.x'],
         1.1241230297043157,

@@ -4,7 +4,7 @@ import pytest
 
 
 def test_reorder_axes_matrix():
-    import omtools.examples.valid.ex_reorder_axes_matrix as example
+    import csdl_om.examples.valid.ex_reorder_axes_matrix as example
 
     val = np.arange(4 * 2).reshape((4, 2))
     desired_output = np.transpose(val)
@@ -21,7 +21,7 @@ def test_reorder_axes_matrix():
 
 
 def test_reorder_axes_tensor():
-    import omtools.examples.valid.ex_reorder_axes_tensor as example
+    import csdl_om.examples.valid.ex_reorder_axes_tensor as example
 
     val = np.arange(4 * 3 * 5 * 2).reshape((4, 3, 5, 2))
     desired_output = np.transpose(val, [3, 1, 2, 0])

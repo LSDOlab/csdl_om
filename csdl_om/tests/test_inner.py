@@ -4,7 +4,7 @@ import pytest
 
 
 def test_vector_vector_inner():
-    import omtools.examples.valid.ex_inner_vector_vector as example
+    import csdl_om.examples.valid.ex_inner_vector_vector as example
 
     m = 3
 
@@ -27,7 +27,7 @@ def test_vector_vector_inner():
 
 
 def test_tensor_vector_inner():
-    import omtools.examples.valid.ex_inner_tensor_vector as example
+    import csdl_om.examples.valid.ex_inner_tensor_vector as example
 
     m = 3
     n = 4
@@ -61,7 +61,7 @@ def test_tensor_vector_inner():
 
 
 def test_tensor_tensor_inner():
-    import omtools.examples.valid.ex_inner_tensor_tensor as example
+    import csdl_om.examples.valid.ex_inner_tensor_tensor as example
 
     m = 3
     n = 4

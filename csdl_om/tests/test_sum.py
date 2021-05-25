@@ -4,7 +4,7 @@ import pytest
 
 
 def test_sum_single_vector():
-    import omtools.examples.valid.ex_sum_single_vector as example
+    import csdl_om.examples.valid.ex_sum_single_vector as example
 
     n = 3
 
@@ -24,7 +24,7 @@ def test_sum_single_vector():
 
 
 def test_sum_single_matrix():
-    import omtools.examples.valid.ex_sum_single_matrix as example
+    import csdl_om.examples.valid.ex_sum_single_matrix as example
 
     n = 3
     m = 6
@@ -45,7 +45,7 @@ def test_sum_single_matrix():
 
 
 def test_sum_single_tensor():
-    import omtools.examples.valid.ex_sum_single_tensor as example
+    import csdl_om.examples.valid.ex_sum_single_tensor as example
 
     n = 3
     m = 4
@@ -68,7 +68,7 @@ def test_sum_single_tensor():
 
 
 def test_sum_multiple_vector():
-    import omtools.examples.valid.ex_sum_multiple_vector as example
+    import csdl_om.examples.valid.ex_sum_multiple_vector as example
 
     n = 3
 
@@ -89,7 +89,7 @@ def test_sum_multiple_vector():
 
 
 def test_sum_multiple_matrix():
-    import omtools.examples.valid.ex_sum_multiple_matrix as example
+    import csdl_om.examples.valid.ex_sum_multiple_matrix as example
 
     n = 3
     m = 6
@@ -111,7 +111,7 @@ def test_sum_multiple_matrix():
 
 
 def test_sum_multiple_tensor():
-    import omtools.examples.valid.ex_sum_multiple_tensor as example
+    import csdl_om.examples.valid.ex_sum_multiple_tensor as example
 
     n = 3
     m = 6
@@ -135,7 +135,7 @@ def test_sum_multiple_tensor():
 
 
 def test_sum_single_matrix_along0():
-    import omtools.examples.valid.ex_sum_single_matrix_along0 as example
+    import csdl_om.examples.valid.ex_sum_single_matrix_along0 as example
 
     n = 3
     m = 6
@@ -158,7 +158,7 @@ def test_sum_single_matrix_along0():
 
 
 def test_sum_single_matrix_along1():
-    import omtools.examples.valid.ex_sum_single_matrix_along1 as example
+    import csdl_om.examples.valid.ex_sum_single_matrix_along1 as example
 
     n = 3
     m = 6
@@ -181,7 +181,7 @@ def test_sum_single_matrix_along1():
 
 
 def test_sum_multiple_matrix_along0():
-    import omtools.examples.valid.ex_sum_multiple_matrix_along0 as example
+    import csdl_om.examples.valid.ex_sum_multiple_matrix_along0 as example
 
     n = 3
     m = 6
@@ -205,7 +205,7 @@ def test_sum_multiple_matrix_along0():
 
 
 def test_sum_multiple_matrix_along1():
-    import omtools.examples.valid.ex_sum_multiple_matrix_along1 as example
+    import csdl_om.examples.valid.ex_sum_multiple_matrix_along1 as example
 
     n = 3
     m = 6

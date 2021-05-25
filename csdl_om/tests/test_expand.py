@@ -4,7 +4,7 @@ import pytest
 
 
 def test_expand_scalar2array():
-    import omtools.examples.valid.ex_expand_scalar2_array as example
+    import csdl_om.examples.valid.ex_expand_scalar2_array as example
     np.testing.assert_array_equal(example.sim['scalar'], np.array([1]))
     np.testing.assert_array_equal(
         example.sim['expanded_scalar'],
@@ -21,7 +21,7 @@ def test_expand_scalar2array():
 
 
 def test_expand_array2higherarray():
-    import omtools.examples.valid.ex_expand_array2_higher_array as example
+    import csdl_om.examples.valid.ex_expand_array2_higher_array as example
 
     array = np.array([
         [1., 2., 3.],
@@ -44,19 +44,19 @@ def test_expand_array2higherarray():
 
 def test_scalar_incorrect_order():
     with pytest.raises(TypeError):
-        import omtools.examples.invalid.ex_expand_scalar_incorrect_order as example
+        import csdl_om.examples.invalid.ex_expand_scalar_incorrect_order as example
 
 
 def test_no_indices():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_expand_array_no_indices as example
+        import csdl_om.examples.invalid.ex_expand_array_no_indices as example
 
 
 def test_array_invalid_indices1():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_expand_array_invalid_indices1 as example
+        import csdl_om.examples.invalid.ex_expand_array_invalid_indices1 as example
 
 
 def test_array_invalid_indices2():
     with pytest.raises(ValueError):
-        import omtools.examples.invalid.ex_expand_array_invalid_indices2 as example
+        import csdl_om.examples.invalid.ex_expand_array_invalid_indices2 as example

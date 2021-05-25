@@ -4,7 +4,7 @@ import pytest
 
 
 def test_vector_vector_dot():
-    import omtools.examples.valid.ex_dot_vector_vector as example
+    import csdl_om.examples.valid.ex_dot_vector_vector as example
 
     m = 3
 
@@ -27,7 +27,7 @@ def test_vector_vector_dot():
 
 
 def test_tensor_tensor_first_dot():
-    import omtools.examples.valid.ex_dot_tensor_tensor_first as example
+    import csdl_om.examples.valid.ex_dot_tensor_tensor_first as example
 
     m = 3
     n = 4
@@ -57,7 +57,7 @@ def test_tensor_tensor_first_dot():
 
 
 def test_tensor_tensor_last_dot():
-    import omtools.examples.valid.ex_dot_tensor_tensor_last as example
+    import csdl_om.examples.valid.ex_dot_tensor_tensor_last as example
 
     m = 2
     n = 4
@@ -88,14 +88,14 @@ def test_tensor_tensor_last_dot():
 
 def test_dot_vec_different_shapes():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_dot_vec_different_shapes as example
+        import csdl_om.examples.invalid.ex_dot_vec_different_shapes as example
 
 
 def test_dot_ten_different_shapes():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_dot_ten_different_shapes as example
+        import csdl_om.examples.invalid.ex_dot_ten_different_shapes as example
 
 
 def test_dot_wrong_axis():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_dot_ten_different_shapes as example
+        import csdl_om.examples.invalid.ex_dot_ten_different_shapes as example

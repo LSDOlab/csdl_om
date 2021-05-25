@@ -4,7 +4,7 @@ import pytest
 
 
 def test_min_scalar():
-    import omtools.examples.valid.ex_min_scalar as example
+    import csdl_om.examples.valid.ex_min_scalar as example
 
     m = 2
     n = 3
@@ -28,7 +28,7 @@ def test_min_scalar():
 
 
 def test_min_axiswise():
-    import omtools.examples.valid.ex_min_axiswise as example
+    import csdl_om.examples.valid.ex_min_axiswise as example
 
     m = 2
     n = 3
@@ -52,7 +52,7 @@ def test_min_axiswise():
 
 
 def test_min_elementwise():
-    import omtools.examples.valid.ex_min_elementwise as example
+    import csdl_om.examples.valid.ex_min_elementwise as example
 
     tensor1 = np.array([[1, 5, -8], [10, -3, -5]])
     tensor2 = np.array([[2, 6, 9], [-1, 2, 4]])
@@ -71,9 +71,9 @@ def test_min_elementwise():
 
 def test_min_multi_inputs_and_axis():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_min_multi_inputs_and_axis as example
+        import csdl_om.examples.invalid.ex_min_multi_inputs_and_axis as example
 
 
 def test_min_inputs_not_same_size():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_min_inputs_not_same_size as example
+        import csdl_om.examples.invalid.ex_min_inputs_not_same_size as example

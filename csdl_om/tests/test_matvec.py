@@ -4,7 +4,7 @@ import pytest
 
 
 def test_matrix_vector_multiplication():
-    import omtools.examples.valid.ex_matvec_mat_vec_product as example
+    import csdl_om.examples.valid.ex_matvec_mat_vec_product as example
 
     m = 3
     n = 4
@@ -34,4 +34,4 @@ def test_matrix_vector_multiplication():
 
 def test_matrix_vector_incompatible_shapes():
     with pytest.raises(Exception):
-        import omtools.examples.invalid.ex_matvec_matrix_vector_incompatible_shapes as example
+        import csdl_om.examples.invalid.ex_matvec_matrix_vector_incompatible_shapes as example

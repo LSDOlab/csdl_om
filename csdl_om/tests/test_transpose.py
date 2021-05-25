@@ -4,7 +4,7 @@ import pytest
 
 
 def test_matrix_transpose():
-    import omtools.examples.valid.ex_transpose_matrix as example
+    import csdl_om.examples.valid.ex_transpose_matrix as example
 
     # MATRIX TRANSPOSE
     val = np.arange(4 * 2).reshape((4, 2))
@@ -22,7 +22,7 @@ def test_matrix_transpose():
 
 
 def test_tensor_transpose():
-    import omtools.examples.valid.ex_transpose_tensor as example
+    import csdl_om.examples.valid.ex_transpose_tensor as example
 
     # TENSOR TRANSPOSE
     val = np.arange(4 * 3 * 5 * 2).reshape((4, 3, 5, 2))

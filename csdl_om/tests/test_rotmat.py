@@ -4,7 +4,7 @@ import pytest
 
 
 def test_rotmat_scalar_rotX():
-    import omtools.examples.valid.ex_rotmat_scalar_rot_x as example
+    import csdl_om.examples.valid.ex_rotmat_scalar_rot_x as example
 
     c = np.cos(np.pi / 3)
     s = np.sin(np.pi / 3)
@@ -24,7 +24,7 @@ def test_rotmat_scalar_rotX():
 
 
 def test_rotmat_scalar_rotY():
-    import omtools.examples.valid.ex_rotmat_scalar_rot_y as example
+    import csdl_om.examples.valid.ex_rotmat_scalar_rot_y as example
 
     c = np.cos(np.pi / 3)
     s = np.sin(np.pi / 3)
@@ -37,7 +37,7 @@ def test_rotmat_scalar_rotY():
 
 
 def test_rotmat_same_radian_tensor_rotX():
-    import omtools.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
+    import csdl_om.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
@@ -65,7 +65,7 @@ def test_rotmat_same_radian_tensor_rotX():
 
 
 def test_rotmat_same_radian_tensor_rotX():
-    import omtools.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
+    import csdl_om.examples.valid.ex_rotmat_same_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
@@ -93,7 +93,7 @@ def test_rotmat_same_radian_tensor_rotX():
 
 
 def test_rotmat_diff_radian_tensor_rotX():
-    import omtools.examples.valid.ex_rotmat_diff_radian_tensor_rot_x as example
+    import csdl_om.examples.valid.ex_rotmat_diff_radian_tensor_rot_x as example
 
     # Shape of a random tensor rotation matrix
     shape = (2, 3, 4)
