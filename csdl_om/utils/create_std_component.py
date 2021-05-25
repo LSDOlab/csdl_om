@@ -67,6 +67,7 @@ from csdl.operations.reshape import reshape
 from csdl.operations.reorder_axes import reorder_axes
 from csdl.operations.sum import sum
 from csdl.operations.average import average
+from csdl.operations.min import min
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -93,11 +94,13 @@ from csdl_om.comps.cross_product_comp import CrossProductComp
 from csdl_om.comps.rotation_matrix_comp import RotationMatrixComp
 from csdl_om.comps.reshape_comp import ReshapeComp
 from csdl_om.comps.reorder_axes_comp import ReorderAxesComp
-from csdl_om.comps.scalar_extremum_comp import ScalarExtremumComp
 from csdl_om.comps.single_tensor_sum_comp import SingleTensorSumComp
 from csdl_om.comps.multiple_tensor_sum_comp import MultipleTensorSumComp
 from csdl_om.comps.single_tensor_average_comp import SingleTensorAverageComp
 from csdl_om.comps.multiple_tensor_average_comp import MultipleTensorAverageComp
+from csdl_om.comps.scalar_extremum_comp import ScalarExtremumComp
+from csdl_om.comps.axiswise_min_comp import AxisMinComp
+from csdl_om.comps.elementwise_min_comp import ElementwiseMinComp
 
 import numpy as np
 
@@ -488,45 +491,6 @@ op_comp_map[opclass] = lambda op: RotationMatrixComp(
     axis=op.literals['axis'],
     val=op.dependencies[0].val,
 )
-# lambda op:
-# SingleTensorSumComp(
-#                 in_name=summands[0].name,
-#                 shape=summands[0].shape,
-#                 out_name=out.name,
-#                 val=summands[0].val,
-#             )
-#     if axes is None:
-#         if len(summands) == 1:
-#         else:
-#             out.shape = expr.shape
-#             out.build = lambda: MultipleTensorSumComp(
-#                 in_names=[expr.name for expr in summands],
-#                 shape=expr.shape,
-#                 out_name=out.name,
-#                 vals=[expr.val for expr in summands],
-#             )
-#     else:
-#         output_shape = np.delete(expr.shape, axes)
-#         out.shape = tuple(output_shape)
-
-#         if len(summands) == 1:
-#             out.build = lambda: SingleTensorSumComp(
-#                 in_name=expr.name,
-#                 shape=expr.shape,
-#                 out_name=out.name,
-#                 out_shape=out.shape,
-#                 axes=axes,
-#                 val=summands[0].val,
-#             )
-#         else:
-#             out.build = lambda: MultipleTensorSumComp(
-#                 in_names=[expr.name for expr in summands],
-#                 shape=expr.shape,
-#                 out_name=out.name,
-#                 out_shape=out.shape,
-#                 axes=axes,
-#                 vals=[expr.val for expr in summands],
-#             )
 
 # Array Operations
 
@@ -617,6 +581,31 @@ op_comp_map[opclass] = lambda op: (SingleTensorAverageComp(
     axes=op.literals['axes'],
     vals=[var.val for var in op.dependencies],
 ))
+
+opclass = min
+op_comp_map[opclass] = lambda op: AxisMinComp(
+    shape=op.dependencies[0].shape,
+    in_name=op.dependencies[0].name,
+    axis=op.literals['axis'],
+    out_name=op.outs[0].name,
+    rho=op.literals['rho'],
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 and op.literals['axis'] != None else (
+    ElementwiseMinComp(
+        shape=op.dependencies[0].shape,
+        in_names=[var.name for var in op.dependencies],
+        out_name=op.outs[0].name,
+        rho=op.literals['rho'],
+        vals=[var.val for var in op.dependencies],
+    ) if len(op.dependencies) > 1 and op.literals['axis'] == None else
+    (ScalarExtremumComp(
+        shape=op.dependencies[0].shape,
+        in_name=op.dependencies[0].name,
+        out_name=op.outs[0].name,
+        rho=op.literals['rho'],
+        lower_flag=True,
+        val=op.dependencies[0].val,
+    ) if len(op.dependencies) == 1 and op.literals['axis'] == None else None))
 
 
 def create_std_component(op: StandardOperation):
