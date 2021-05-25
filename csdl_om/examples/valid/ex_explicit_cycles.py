@@ -1,5 +1,4 @@
-from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS
-from csdl import Model
+from csdl import Model, NonlinearBlockGS
 import csdl
 import numpy as np
 from csdl_om import Simulator
@@ -31,6 +30,7 @@ class ExampleCycles(Model):
 
 sim = Simulator(ExampleCycles())
 sim.run()
+sim.visualize_model()
 
 print('cycle_1.x', sim['cycle_1.x'].shape)
 print(sim['cycle_1.x'])
