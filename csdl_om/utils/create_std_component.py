@@ -68,6 +68,7 @@ from csdl.operations.reorder_axes import reorder_axes
 from csdl.operations.sum import sum
 from csdl.operations.average import average
 from csdl.operations.min import min
+from csdl.operations.max import max
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -101,6 +102,8 @@ from csdl_om.comps.multiple_tensor_average_comp import MultipleTensorAverageComp
 from csdl_om.comps.scalar_extremum_comp import ScalarExtremumComp
 from csdl_om.comps.axiswise_min_comp import AxisMinComp
 from csdl_om.comps.elementwise_min_comp import ElementwiseMinComp
+from csdl_om.comps.axiswise_max_comp import AxisMaxComp
+from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
 
 import numpy as np
 
@@ -604,6 +607,31 @@ op_comp_map[opclass] = lambda op: AxisMinComp(
         out_name=op.outs[0].name,
         rho=op.literals['rho'],
         lower_flag=True,
+        val=op.dependencies[0].val,
+    ) if len(op.dependencies) == 1 and op.literals['axis'] == None else None))
+
+opclass = max
+op_comp_map[opclass] = lambda op: AxisMaxComp(
+    shape=op.dependencies[0].shape,
+    in_name=op.dependencies[0].name,
+    axis=op.literals['axis'],
+    out_name=op.outs[0].name,
+    rho=op.literals['rho'],
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 and op.literals['axis'] != None else (
+    ElementwiseMaxComp(
+        shape=op.dependencies[0].shape,
+        in_names=[var.name for var in op.dependencies],
+        out_name=op.outs[0].name,
+        rho=op.literals['rho'],
+        vals=[var.val for var in op.dependencies],
+    ) if len(op.dependencies) > 1 and op.literals['axis'] == None else
+    (ScalarExtremumComp(
+        shape=op.dependencies[0].shape,
+        in_name=op.dependencies[0].name,
+        out_name=op.outs[0].name,
+        rho=op.literals['rho'],
+        lower_flag=False,
         val=op.dependencies[0].val,
     ) if len(op.dependencies) == 1 and op.literals['axis'] == None else None))
 
