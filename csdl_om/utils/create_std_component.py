@@ -66,6 +66,7 @@ from csdl.operations.expand import expand
 from csdl.operations.reshape import reshape
 from csdl.operations.reorder_axes import reorder_axes
 from csdl.operations.sum import sum
+from csdl.operations.average import average
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -95,6 +96,8 @@ from csdl_om.comps.reorder_axes_comp import ReorderAxesComp
 from csdl_om.comps.scalar_extremum_comp import ScalarExtremumComp
 from csdl_om.comps.single_tensor_sum_comp import SingleTensorSumComp
 from csdl_om.comps.multiple_tensor_sum_comp import MultipleTensorSumComp
+from csdl_om.comps.single_tensor_average_comp import SingleTensorAverageComp
+from csdl_om.comps.multiple_tensor_average_comp import MultipleTensorAverageComp
 
 import numpy as np
 
@@ -580,6 +583,33 @@ op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
     axes=op.literals['axes'],
     val=op.dependencies[0].val,
 ) if len(op.dependencies) == 1 else MultipleTensorSumComp(
+    in_names=[var.name for var in op.dependencies],
+    shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
+    axes=op.literals['axes'],
+    vals=[var.val for var in op.dependencies],
+))
+
+opclass = average
+op_comp_map[opclass] = lambda op: (SingleTensorAverageComp(
+    in_name=op.dependencies[0].name,
+    shape=op.outs[0].shape,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 else MultipleTensorAverageComp(
+    in_names=[var.name for var in op.dependencies],
+    shape=op.outs[0].shape,
+    out_name=op.outs[0].name,
+    vals=[var.val for var in op.dependencies],
+)) if op.literals['axes'] is None else (SingleTensorAverageComp(
+    in_name=op.dependencies[0].name,
+    shape=op.dependencies[0].shape,
+    out_name=op.outs[0].name,
+    out_shape=op.outs[0].shape,
+    axes=op.literals['axes'],
+    val=op.dependencies[0].val,
+) if len(op.dependencies) == 1 else MultipleTensorAverageComp(
     in_names=[var.name for var in op.dependencies],
     shape=op.dependencies[0].shape,
     out_name=op.outs[0].name,
