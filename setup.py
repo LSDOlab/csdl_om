@@ -1,13 +1,13 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='csdl_om',
-    version='0.1',
     packages=[
         'csdl_om',
     ],
     install_requires=[
-        # 'csdl@git+https://github.com/lsdolab/csdl@master',
+        'csdl @ git+https://git@github.com/lsdolab/csdl@master',
+        # 'csdl @ git+https://git@github.com/lsdolab/csdl@0.0.1#egg=csdl',
         'openmdao',
         'numpy',
         'dash==1.2.0',
