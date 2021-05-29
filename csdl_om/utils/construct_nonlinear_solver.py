@@ -14,7 +14,7 @@ from openmdao.solvers.linesearch.backtracking import ArmijoGoldsteinLS as OMArmi
 
 def construct_nonlinear_solver(solver):
     if not isinstance(solver, NonlinearSolver):
-        raise TypeError("")
+        raise TypeError("{} is not a NonlinearSolver".format(solver))
     # initialize OpenMDAO solver
     s = None
     if isinstance(solver, NonlinearBlockGS):
@@ -27,6 +27,8 @@ def construct_nonlinear_solver(solver):
         s = OMBoundsEnforceLS()
     if isinstance(solver, ArmijoGoldsteinLS):
         s = OMArmijoGoldsteinLS()
+    if isinstance(solver, NewtonSolver):
+        s = OMNewtonSolver()
 
     set_recording_options(s, solver)
 
