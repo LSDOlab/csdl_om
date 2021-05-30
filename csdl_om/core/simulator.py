@@ -41,7 +41,7 @@ class Simulator:
                 model,
                 None,
             ))
-            self.prob.setup()
+            self.prob.setup(force_alloc_complex=True)
         elif isinstance(model, ImplicitModel):
             self.prob = Problem()
             self.prob.model.add_subsystem(
@@ -52,7 +52,7 @@ class Simulator:
                 ),
                 promotes=['*'],
             )
-            self.prob.setup()
+            self.prob.setup(force_alloc_complex=True)
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
