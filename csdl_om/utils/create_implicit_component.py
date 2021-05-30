@@ -4,7 +4,8 @@ from csdl import Output
 from networkx.algorithms.core import k_core
 from openmdao.api import ImplicitComponent
 import numpy as np
-from openmdao.api import ScipyKrylov, NewtonSolver, NonlinearBlockGS, LinearRunOnce, NonlinearRunOnce
+from csdl_om.utils.construct_linear_solver import construct_linear_solver
+from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 
 
 def create_implicit_component(
@@ -240,7 +241,7 @@ def create_implicit_component(
 
     implicit_component = implicit_model_types[t]()
     if ls is not None:
-        implicit_component.linear_solver = ls
+        implicit_component.linear_solver = construct_linear_solver(ls)
     if ns is not None:
-        implicit_component.nonlinear_solver = ns
+        implicit_component.nonlinear_solver = construct_nonlinear_solver(ns)
     return implicit_component

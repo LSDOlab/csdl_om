@@ -9,6 +9,7 @@ from csdl import (
     Subgraph,
 )
 from openmdao.api import Problem, Group, IndepVarComp
+from openmdao.utils.assert_utils import assert_check_partials
 from openmdao.core.constants import _DEFAULT_OUT_STREAM
 from typing import Callable, Dict, Tuple, List, Union
 from csdl_om.utils.create_std_component import create_std_component
@@ -41,32 +42,17 @@ class Simulator:
                 None,
             ))
             self.prob.setup()
-
-            # Set default values
-            for in_var in model.inputs:
-                self.prob[in_var.name] = in_var.val
-            # for var in model.variables:
-            # try:
-            # self.prob[var.name] = var.val
-            # except:
-            # pass
         elif isinstance(model, ImplicitModel):
-            self.prob = Problem(
+            self.prob = Problem()
+            self.prob.model.add_subsystem(
+                'model',
                 create_implicit_component(
                     self.implicit_model_types,
                     model,
-                ))
+                ),
+                promotes=['*'],
+            )
             self.prob.setup()
-
-            # Set default values
-            inputs = []
-            for in_var in model.out_in_map.values():
-                inputs.extend(in_var)
-            inputs = list(set(inputs))
-            for in_var in inputs:
-                self.prob[in_var.name] = in_var.val
-            for var in model.variables:
-                self.prob[var.name] = var.val
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
@@ -151,6 +137,8 @@ class Simulator:
             promotes = ['*']
             promotes_inputs = None
             promotes_outputs = None
+            # Create Component for Model or Operation added using
+            # Model.add
             if isinstance(node, Subgraph):
                 if isinstance(node.submodel, Model):
                     # create Group
@@ -164,35 +152,34 @@ class Simulator:
                     promotes_outputs = node.promotes_outputs
                 if isinstance(node.submodel, CustomOperation):
                     # create Component
-                    sys = create_custom_component(operation_types, node)
+                    sys = create_custom_component(
+                        operation_types,
+                        node.submodel,
+                    )
+                    pfx = ''
+                    promotes = node.promotes
+                    promotes_inputs = node.promotes_inputs
+                    promotes_outputs = node.promotes_outputs
+                if isinstance(node.submodel, ImplicitModel):
+                    # create Component from user-defined Operation
+                    sys = create_implicit_component(
+                        operation_types,
+                        node.submodel,
+                    )
                     pfx = ''
                     promotes = node.promotes
                     promotes_inputs = node.promotes_inputs
                     promotes_outputs = node.promotes_outputs
             elif isinstance(node, Operation):
                 if isinstance(node, StandardOperation):
-                    # create stock Component
                     sys = create_std_component(node)
-                # elif isinstance(node, CombinedOperation):
-                # sys = create_complex_step_component(operation_types, node)
-                # pass
                 elif isinstance(node, CustomOperation):
-                    # create Component from user-defined Operation
                     sys = create_custom_component(operation_types, node)
-                    pfx = ''
-                    promotes = node.promotes
-                    promotes_inputs = node.promotes_inputs
-                    promotes_outputs = node.promotes_outputs
                 else:
                     raise TypeError(node.name +
                                     " is not a recognized Operation object")
             elif isinstance(node, ImplicitModel):
-                # create Component from user-defined Operation
                 sys = create_implicit_component(operation_types, node)
-                pfx = ''
-                promotes = node.promotes
-                promotes_inputs = node.promotes_inputs
-                promotes_outputs = node.promotes_output
             if sys is not None:
                 group.add_subsystem(
                     pfx + node.name,
@@ -250,3 +237,6 @@ class Simulator:
             force_dense=force_dense,
             show_only_incorrect=show_only_incorrect,
         )
+
+    def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
+        assert_check_partials(result, atol=atol, rtol=rtol)
