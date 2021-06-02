@@ -6,8 +6,7 @@ setup(
         'csdl_om',
     ],
     install_requires=[
-        'csdl @ git+https://git@github.com/lsdolab/csdl@master',
-        # 'csdl @ git+https://git@github.com/lsdolab/csdl@0.0.1#egg=csdl',
+        'csdl<1',
         'openmdao',
         'numpy',
         'dash==1.2.0',
