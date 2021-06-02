@@ -22,7 +22,7 @@ class ElementwiseCS(ExplicitComponent):
             self.add_input(in_name, shape=shape, val=in_val)
 
         indices = np.arange(np.prod(shape))
-        self.declare_partials('*', '*', rows=indices, cols=indices)
+        self.declare_partials(out_name, in_names, rows=indices, cols=indices)
 
     def compute(self, inputs, outputs):
         in_names = self.options['in_names']
@@ -35,7 +35,7 @@ class ElementwiseCS(ExplicitComponent):
 
         # compute function
         exec(compute_string)
-        outputs[out_name] = eval(out_name).flatten()
+        outputs[out_name] = eval(out_name)
 
     def compute_partials(self, inputs, partials):
         in_names = self.options['in_names']
@@ -46,8 +46,10 @@ class ElementwiseCS(ExplicitComponent):
         for in_name in in_names:
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
         for in_name in in_names:
+            # apply complex step to one input at a time
             exec('{}=inputs[\'{}\']+1j*{}'.format(in_name, in_name, step))
             exec(compute_string)
-            exec('partials[\'{}\',\'{}\']=({}).imag/{}'.format(
+            exec('partials[\'{}\',\'{}\']=(({}).imag/{}).flatten()'.format(
                 out_name, in_name, out_name, step))
+            # restore input symbol for next derivative
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
