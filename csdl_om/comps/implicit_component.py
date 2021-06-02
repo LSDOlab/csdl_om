@@ -96,7 +96,7 @@ def _post_setup(func: Callable) -> Callable:
                     pass
                 else:
                     self.prob.model.add_design_var(out_name)
-        self.prob.setup()
+        self.prob.setup(force_alloc_complex=True)
 
         # set initial values for inputs and output
         for res_expr in self.model.registered_outputs:

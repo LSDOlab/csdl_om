@@ -52,7 +52,8 @@ class Simulator:
                 ),
                 promotes=['*'],
             )
-            self.prob.setup(force_alloc_complex=True)
+            # TODO: why force_alloc_complex=False ??
+            self.prob.setup(force_alloc_complex=False)
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
