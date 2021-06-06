@@ -8,7 +8,7 @@ setup(
     install_requires=[
         'csdl<1',
         'openmdao',
-        'numpy',
+        'numpy>=1.20,<1.21',
         'dash==1.2.0',
         'dash-daq==0.1.0',
         'pint',
