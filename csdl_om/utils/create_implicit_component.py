@@ -44,7 +44,8 @@ def create_implicit_component(
                 for in_var in out_in_map[implicit_output_name]:
                     in_name = in_var.name
                     if in_name is not implicit_output_name:
-                        comp.sim[in_name] = inputs[in_name]
+                        if in_name not in implicit_output_names:
+                            comp.sim[in_name] = inputs[in_name]
 
         def _run_internal_model(
             comp,
@@ -68,7 +69,7 @@ def create_implicit_component(
         def setup(comp):
             comp.maxiter = comp.options['maxiter']
             comp.sim = Simulator(implicit_model._model)
-            for implicit_output in res_out_map.values():
+            for implicit_output in implicit_outputs:
                 implicit_output_name = implicit_output.name
 
                 comp.add_output(
