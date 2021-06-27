@@ -89,32 +89,42 @@ def create_implicit_component(
                     copy_shape=implicit_output.copy_shape,
                 )
 
-                for in_var in out_in_map[implicit_output_name]:
-                    in_name = in_var.name
-                    if in_name not in out_in_map.keys():
-                        comp.add_input(
-                            in_name,
-                            val=in_var.val,
-                            shape=in_var.shape,
-                            src_indices=in_var.src_indices,
-                            flat_src_indices=in_var.flat_src_indices,
-                            units=in_var.units,
-                            desc=in_var.desc,
-                            tags=in_var.tags,
-                            shape_by_conn=in_var.shape_by_conn,
-                            copy_shape=in_var.copy_shape,
-                        )
-
-                    # Internal model automates derivative computation,
-                    # so sparsity pattern does not need to be declared
-                    # here
+                # Declare derivatives of residuals wrt implicit outputs
+                for other_implicit_output in implicit_outputs:
                     comp.declare_partials(
                         of=implicit_output_name,
-                        wrt=in_name,
+                        wrt=other_implicit_output.name,
                     )
 
-                    # set values
-                    comp.sim[in_name] = in_var.val
+                for in_var in out_in_map[implicit_output_name]:
+                    in_name = in_var.name
+                    if in_name not in implicit_output_names:
+                        try:
+                            comp.add_input(
+                                in_name,
+                                val=in_var.val,
+                                shape=in_var.shape,
+                                src_indices=in_var.src_indices,
+                                flat_src_indices=in_var.flat_src_indices,
+                                units=in_var.units,
+                                desc=in_var.desc,
+                                tags=in_var.tags,
+                                shape_by_conn=in_var.shape_by_conn,
+                                copy_shape=in_var.copy_shape,
+                            )
+
+                            # Internal model automates derivative
+                            # computation, so sparsity pattern does not
+                            # need to be declared here
+                            comp.declare_partials(
+                                of=implicit_output_name,
+                                wrt=in_name,
+                            )
+
+                            # set values
+                            comp.sim[in_name] = in_var.val
+                        except:
+                            pass
                 comp.sim[implicit_output_name] = implicit_output.val
                 if implicit_model.visualize is True:
                     comp.sim.visualize_model()
