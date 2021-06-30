@@ -54,10 +54,22 @@ class Simulator:
             )
             # TODO: why force_alloc_complex=False ??
             self.prob.setup(force_alloc_complex=False)
+        elif isinstance(model, CustomOperation):
+            self.prob = Problem()
+            # create Component
+            self.prob.model.add_subsystem(
+                'model',
+                create_custom_component(
+                    dict(),
+                    model,
+                ),
+                promotes=['*'],
+            )
+            self.prob.setup(force_alloc_complex=True)
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
-                "from CSDL Operations. Future updates will enable "
+                "from CSDL Operations other than CustomOperations. Future updates will enable "
                 "constructing OpenMDAO problems from simple model "
                 "definitions.")
         else:
