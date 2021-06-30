@@ -6,13 +6,15 @@ def create_custom_component(operation_types, op: CustomOperation):
     t = type(op)
     # Create new component class if necessary
     if t not in operation_types.keys():
+        op.define()
+
         # NOTE: op.initialize ran when op was constructed in CSDL (front
         # end); op.parameters defined at this stage
 
         # Define the setup method for the component class; applies to
         # both explicit and implicit component subclass definitions
         def setup(comp):
-            for name, meta in op.input_meta:
+            for name, meta in op.input_meta.items():
                 comp.add_input(
                     name,
                     val=meta['val'],
@@ -25,7 +27,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     shape_by_conn=meta['shape_by_conn'],
                     copy_shape=meta['copy_shape'],
                 )
-            for name, meta in op.output_meta:
+            for name, meta in op.output_meta.items():
                 comp.add_output(
                     name,
                     val=meta['val'],
@@ -42,7 +44,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     shape_by_conn=meta['shape_by_conn'],
                     copy_shape=meta['copy_shape'],
                 )
-            for (of, wrt), meta in op.derivatives_meta:
+            for (of, wrt), meta in op.derivatives_meta.items():
                 comp.declare_partials(
                     of=of,
                     wrt=wrt,
