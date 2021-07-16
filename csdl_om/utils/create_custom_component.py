@@ -68,6 +68,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     setup=setup,
                     compute=t.compute,
                     compute_partials=t.compute_derivatives,
+                    compute_jacvec_product=t.compute_jacvec_product,
                 ),
             )
             operation_types[t] = u
@@ -83,6 +84,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     solve_nonlinear=t.solve_residual_equations,
                     linearize=t.compute_derivatives,
                     solve_linear=t.apply_inverse_jacobian,
+                    apply_linear=t.compute_jacvec_product,
                 ),
             )
             operation_types[t] = u
