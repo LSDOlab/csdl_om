@@ -1,3 +1,4 @@
+from csdl.utils.parameters import Parameters
 from csdl import CustomOperation, ExplicitOperation, ImplicitOperation
 from openmdao.api import ExplicitComponent, ImplicitComponent
 
@@ -59,36 +60,59 @@ def create_custom_component(operation_types, op: CustomOperation):
 
         # Define component class depending on whether it's explicit or
         # implicit, using the setup method defined above
-        if isinstance(op, ExplicitOperation):
-            component_class_name = 'CustomExplicitComponent' + str(op._count)
+        if isinstance(op, CustomOperation):
+            # define initialize function that declares CDSL parameters
+            # in OpenMDAO OptionsDictionary
+            def initialize(self):
+                op.initialize()
+                for k, v in op.parameters._dict.items():
+                    self.options.declare(
+                        k,
+                        default=v['value'],
+                        values=v['values'],
+                        types=v['types'],
+                        desc=v['desc'],
+                        upper=v['upper'],
+                        lower=v['lower'],
+                        check_valid=v['check_valid'],
+                        allow_none=v['allow_none'],
+                    )
+                self.options.update(op.parameters._dict)
+                self.parameters = self.options
 
-            u = type(
-                component_class_name,
-                (ExplicitComponent, ),
-                dict(
-                    options=op.parameters,
-                    setup=setup,
-                    compute=t.compute,
-                    compute_partials=t.compute_derivatives,
-                    compute_jacvec_product=t.compute_jacvec_product,
-                ),
-            )
-            operation_types[t] = u
-        else:
-            component_class_name = 'CustomImplicitComponent' + str(op._count)
-            u = type(
-                component_class_name,
-                (ImplicitComponent, ),
-                dict(
-                    options=op.parameters,
-                    setup=t.define,
-                    apply_nonlinear=t.evaluate_residuals,
-                    solve_nonlinear=t.solve_residual_equations,
-                    linearize=t.compute_derivatives,
-                    solve_linear=t.apply_inverse_jacobian,
-                    apply_linear=t.compute_jacvec_product,
-                ),
-            )
-            operation_types[t] = u
+            if isinstance(op, ExplicitOperation):
+                component_class_name = 'CustomExplicitComponent' + str(
+                    op._count)
+
+                u = type(
+                    component_class_name,
+                    (ExplicitComponent, ),
+                    dict(
+                        initialize=initialize,
+                        setup=setup,
+                        compute=t.compute,
+                        compute_partials=t.compute_derivatives,
+                        compute_jacvec_product=t.compute_jacvec_product,
+                    ),
+                )
+
+                operation_types[t] = u
+            else:
+                component_class_name = 'CustomImplicitComponent' + str(
+                    op._count)
+                u = type(
+                    component_class_name,
+                    (ImplicitComponent, ),
+                    dict(
+                        initialize=initialize,
+                        setup=t.define,
+                        apply_nonlinear=t.evaluate_residuals,
+                        solve_nonlinear=t.solve_residual_equations,
+                        linearize=t.compute_derivatives,
+                        solve_linear=t.apply_inverse_jacobian,
+                        apply_linear=t.compute_jacvec_product,
+                    ),
+                )
+                operation_types[t] = u
 
     return operation_types[t]()
