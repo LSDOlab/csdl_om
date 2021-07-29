@@ -7,16 +7,23 @@ def create_custom_component(operation_types, op: CustomOperation):
     t = type(op)
     # Create new component class if necessary
     if t not in operation_types.keys():
-        op.define()
-
         # NOTE: op.initialize ran when op was constructed in CSDL (front
         # end); op.parameters defined at this stage
 
         # Define the setup method for the component class; applies to
         # both explicit and implicit component subclass definitions
-        def setup(comp):
+        def setup(self):
+            # make sure parameters get updated after
+            # Component.initialize runs
+            for k, v in self.options._dict.items():
+                self.parameters._dict[k] = v
+
+            # run user-defined CustomOperation.define method
+            self._csdl_define()
+
+            # call OpenMDAO methods
             for name, meta in op.input_meta.items():
-                comp.add_input(
+                self.add_input(
                     name,
                     val=meta['val'],
                     shape=meta['shape'],
@@ -29,7 +36,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     copy_shape=meta['copy_shape'],
                 )
             for name, meta in op.output_meta.items():
-                comp.add_output(
+                self.add_output(
                     name,
                     val=meta['val'],
                     shape=meta['shape'],
@@ -46,7 +53,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                     copy_shape=meta['copy_shape'],
                 )
             for (of, wrt), meta in op.derivatives_meta.items():
-                comp.declare_partials(
+                self.declare_partials(
                     of=of,
                     wrt=wrt,
                     rows=meta['rows'],
@@ -64,11 +71,18 @@ def create_custom_component(operation_types, op: CustomOperation):
             # define initialize function that declares CDSL parameters
             # in OpenMDAO OptionsDictionary
             def initialize(self):
-                op.initialize()
-                for k, v in op.parameters._dict.items():
+                # KLUDGE: OpenMDAO calls this method prior to
+                # Component.initialize
+                self._declare_options()
+
+                # user-defined initialize
+                self._csdl_initialize()
+
+                # declare OpenMDAO options
+                for k, v in self.parameters._dict.items():
                     self.options.declare(
                         k,
-                        default=v['value'],
+                        default=v['val'],
                         values=v['values'],
                         types=v['types'],
                         desc=v['desc'],
@@ -77,8 +91,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                         check_valid=v['check_valid'],
                         allow_none=v['allow_none'],
                     )
-                self.options.update(op.parameters._dict)
-                self.parameters = self.options
+                self.options.update(self.parameters._dict)
 
             if isinstance(op, ExplicitOperation):
                 component_class_name = 'CustomExplicitComponent' + str(
@@ -88,11 +101,22 @@ def create_custom_component(operation_types, op: CustomOperation):
                     component_class_name,
                     (ExplicitComponent, ),
                     dict(
+                        # user defined attributes that do not have
+                        # equivalent type/signature in OpenMDAO
+                        parameters=op.parameters,
+                        _csdl_initialize=op.initialize,
+                        _csdl_define=op.define,
+                        # user defined methods that do have
+                        # equivalent signature in OpenMDAO
                         initialize=initialize,
                         setup=setup,
-                        compute=t.compute,
-                        compute_partials=t.compute_derivatives,
-                        compute_jacvec_product=t.compute_jacvec_product,
+                        compute_partials=op.compute_derivatives,
+                        compute=op.compute,
+                        compute_jacvec_product=op.compute_jacvec_product,
+                        # csdl-provided methods to be called by OpenMDAO
+                        _csdl_add_input=t.add_input,
+                        _csdl_add_output=t.add_output,
+                        _csdl_declare_partials=t.declare_derivatives,
                     ),
                 )
 
@@ -104,13 +128,24 @@ def create_custom_component(operation_types, op: CustomOperation):
                     component_class_name,
                     (ImplicitComponent, ),
                     dict(
+                        # user defined attributes that do not have
+                        # equivalent type/signature in OpenMDAO
+                        parameters=op.parameters,
+                        _csdl_initialize=op.initialize,
+                        _csdl_define=op.define,
+                        # user defined methods that do have
+                        # equivalent signature in OpenMDAO
                         initialize=initialize,
-                        setup=t.define,
-                        apply_nonlinear=t.evaluate_residuals,
-                        solve_nonlinear=t.solve_residual_equations,
-                        linearize=t.compute_derivatives,
-                        solve_linear=t.apply_inverse_jacobian,
-                        apply_linear=t.compute_jacvec_product,
+                        setup=setup,
+                        apply_nonlinear=op.evaluate_residuals,
+                        solve_nonlinear=op.solve_residual_equations,
+                        linearize=op.compute_derivatives,
+                        solve_linear=op.apply_inverse_jacobian,
+                        apply_linear=op.compute_jacvec_product,
+                        # csdl-provided methods to be called by OpenMDAO
+                        _csdl_add_input=t.add_input,
+                        _csdl_add_output=t.add_output,
+                        _csdl_declare_partials=t.declare_derivatives,
                     ),
                 )
                 operation_types[t] = u
