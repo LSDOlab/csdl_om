@@ -91,7 +91,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                         check_valid=v['check_valid'],
                         allow_none=v['allow_none'],
                     )
-                self.options.update(self.parameters._dict)
 
             if isinstance(op, ExplicitOperation):
                 component_class_name = 'CustomExplicitComponent' + str(
@@ -150,4 +149,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                 )
                 operation_types[t] = u
 
-    return operation_types[t]()
+    return operation_types[t](
+        **{k: v['val']
+           for k, v in op.parameters._dict.items()})
