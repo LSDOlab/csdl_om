@@ -20,7 +20,11 @@ from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 
 
 class Simulator:
-    def __init__(self, model, reorder=False):
+    def __init__(self, model, mode='auto', reorder=False):
+        if mode not in ['auto', 'fwd', 'rev']:
+            raise ValueError(
+                'Invalid option for `mode`, {}, must be \'auto\', \'fwd\', or \'rev\'.'
+                .format(mode))
         self.reorder = reorder
         self.implicit_model_types = dict()
         if isinstance(model, Model):
@@ -41,7 +45,7 @@ class Simulator:
                 model,
                 None,
             ))
-            self.prob.setup(force_alloc_complex=True)
+            self.prob.setup(force_alloc_complex=True, mode=mode)
         elif isinstance(model, ImplicitModel):
             self.prob = Problem()
             self.prob.model.add_subsystem(
@@ -53,7 +57,7 @@ class Simulator:
                 promotes=['*'],
             )
             # TODO: why force_alloc_complex=False ??
-            self.prob.setup(force_alloc_complex=False)
+            self.prob.setup(force_alloc_complex=False, mode=mode)
         elif isinstance(model, CustomOperation):
             self.prob = Problem()
             # create Component
@@ -65,7 +69,7 @@ class Simulator:
                 ),
                 promotes=['*'],
             )
-            self.prob.setup(force_alloc_complex=True)
+            self.prob.setup(force_alloc_complex=True, mode=mode)
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
