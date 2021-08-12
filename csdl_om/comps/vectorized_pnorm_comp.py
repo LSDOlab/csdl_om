@@ -28,7 +28,7 @@ class VectorizedPnormComp(ExplicitComponent):
         self.options.declare('out_name', types=str)
         self.options.declare('shape', types=tuple)
         self.options.declare('pnorm_type', types=int, default=2)
-        self.options.declare('val', types=np.ndarray)
+        self.options.declare('val', types=np.ndarray, default=np.array([1]))
 
     def setup(self):
         in_name = self.options['in_name']
@@ -40,7 +40,12 @@ class VectorizedPnormComp(ExplicitComponent):
         self.add_input(in_name, shape=shape, val=val)
         self.add_output(out_name)
 
-        self.declare_partials(out_name, in_name)
+        self.declare_partials(
+            out_name,
+            in_name,
+            rows=np.zeros(np.prod(shape)),
+            cols=np.arange(np.prod(shape)),
+        )
 
     def compute(self, inputs, outputs):
         in_name = self.options['in_name']
@@ -55,8 +60,9 @@ class VectorizedPnormComp(ExplicitComponent):
         out_name = self.options['out_name']
         pnorm_type = self.options['pnorm_type']
 
-        partials[out_name, in_name] = self.outputs**(
-            1 - pnorm_type) * inputs[in_name]**(pnorm_type - 1)
+        partials[out_name,
+                 in_name] = (self.outputs**(1 - pnorm_type) *
+                             inputs[in_name]**(pnorm_type - 1)).flatten()
 
 
 if __name__ == "__main__":
