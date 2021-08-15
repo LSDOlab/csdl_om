@@ -377,7 +377,7 @@ op_comp_map[opclass] = lambda op: VectorizedPnormComp(
     pnorm_type=op.literals['pnorm_type'],
     val=op.dependencies[0].val,
 ) if op.literals['axis'] == None else VectorizedAxisWisePnormComp(
-    shape=op.outs[0].shape,
+    shape=op.dependencies[0].shape,
     in_name=op.dependencies[0].name,
     out_shape=tuple(np.delete(op.dependencies[0].shape, op.literals['axis'])),
     out_name=op.outs[0].name,
