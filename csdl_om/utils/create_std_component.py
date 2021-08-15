@@ -371,7 +371,7 @@ op_comp_map[opclass] = lambda op: CotanhComp(
 # Linear Algebra Components
 opclass = pnorm
 op_comp_map[opclass] = lambda op: VectorizedPnormComp(
-    shape=op.outs[0].shape,
+    shape=op.dependencies[0].shape,
     in_name=op.dependencies[0].name,
     out_name=op.outs[0].name,
     pnorm_type=op.literals['pnorm_type'],
