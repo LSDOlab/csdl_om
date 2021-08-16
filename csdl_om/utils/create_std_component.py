@@ -81,6 +81,7 @@ from csdl_om.comps.array_expansion_comp import ArrayExpansionComp
 from csdl_om.comps.scalar_expansion_comp import ScalarExpansionComp
 from csdl_om.comps.matmat_comp import MatMatComp
 from csdl_om.comps.matvec_comp import MatVecComp
+from csdl_om.comps.sparse_matvec_comp import SparseMatVecComp
 from csdl_om.comps.vectorized_pnorm_comp import VectorizedPnormComp
 from csdl_om.comps.vectorized_axiswise_pnorm_comp import VectorizedAxisWisePnormComp
 from csdl_om.comps.transpose_comp import TransposeComp
@@ -401,6 +402,11 @@ op_comp_map[opclass] = lambda op: MatVecComp(
     out_name=op.outs[0].name,
     in_shapes=[var.shape for var in op.dependencies],
     in_vals=[var.val for var in op.dependencies],
+) if op.literals['sparsemtx'] is None else SparseMatVecComp(
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    A=op.literals['sparsemtx'],
+    in_val=op.dependencies[0].val,
 )
 
 opclass = matmat
