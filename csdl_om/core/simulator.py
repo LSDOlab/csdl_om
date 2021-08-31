@@ -4,11 +4,10 @@ from csdl import (
     Operation,
     StandardOperation,
     CustomOperation,
-    Variable,
-    Output,
     Subgraph,
     ExplicitOperation,
     ImplicitOperation,
+    SimulatorBase,
 )
 from openmdao.api import Problem, Group, IndepVarComp
 from openmdao.utils.assert_utils import assert_check_partials
@@ -21,7 +20,7 @@ from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 
 
-class Simulator:
+class Simulator(SimulatorBase):
     def __init__(self, model, mode='auto', reorder=False):
         if mode not in ['auto', 'fwd', 'rev']:
             raise ValueError(
@@ -235,7 +234,7 @@ class Simulator:
                 adder=objective['adder'],
                 scaler=objective['scaler'],
                 parallel_deriv_color=objective['parallel_deriv_color'],
-                vectorize_derivs=objective['vectorize_derivs'],
+                # vectorize_derivs=objective['vectorize_derivs'],
                 cache_linear_solution=objective['cache_linear_solution'],
             )
         for name, meta in model.constraints.items():
