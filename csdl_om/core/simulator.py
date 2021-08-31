@@ -234,7 +234,6 @@ class Simulator(SimulatorBase):
                 adder=objective['adder'],
                 scaler=objective['scaler'],
                 parallel_deriv_color=objective['parallel_deriv_color'],
-                # vectorize_derivs=objective['vectorize_derivs'],
                 cache_linear_solution=objective['cache_linear_solution'],
             )
         for name, meta in model.constraints.items():
