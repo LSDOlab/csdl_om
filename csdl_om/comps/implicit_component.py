@@ -86,16 +86,17 @@ def _post_setup(func: Callable) -> Callable:
                 # treat inputs and output as inputs to internal model
                 # treat residual as output of internal model
                 self.prob.model.add_constraint(res_expr.name)
-                for in_expr in in_exprs:
-                    in_name = in_expr.name
-                    if in_name in self.prob.model._design_vars or in_name in self.prob.model._static_design_vars:
-                        pass
-                    else:
-                        self.prob.model.add_design_var(in_name)
-                if out_name in self.prob.model._design_vars or out_name in self.prob.model._static_design_vars:
-                    pass
-                else:
-                    self.prob.model.add_design_var(out_name)
+                # NOTE: not necessary for updating values/solving system
+                # for in_expr in in_exprs:
+                #     in_name = in_expr.name
+                #     if in_name in self.prob.model._design_vars or in_name in self.prob.model._static_design_vars:
+                #         pass
+                #     else:
+                #         self.prob.model.add_design_var(in_name)
+                # if out_name in self.prob.model._design_vars or out_name in self.prob.model._static_design_vars:
+                #     pass
+                # else:
+                #     self.prob.model.add_design_var(out_name)
         self.prob.setup(force_alloc_complex=True)
 
         # set initial values for inputs and output
