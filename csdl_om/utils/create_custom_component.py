@@ -1,6 +1,8 @@
 from csdl.utils.parameters import Parameters
 from csdl import CustomOperation, ExplicitOperation, ImplicitOperation
 from openmdao.api import ExplicitComponent, ImplicitComponent
+from csdl_om.utils.construct_linear_solver import construct_linear_solver
+from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 
 
 def create_custom_component(operation_types, op: CustomOperation):
@@ -20,6 +22,15 @@ def create_custom_component(operation_types, op: CustomOperation):
 
             # run user-defined CustomOperation.define method
             self._csdl_define()
+
+            # assign solver to implicit component
+            if isinstance(self, ImplicitComponent):
+                if op.linear_solver is not None:
+                    self.linear_solver = construct_linear_solver(
+                        op.linear_solver)
+                if op.nonlinear_solver is not None:
+                    self.nonlinear_solver = construct_nonlinear_solver(
+                        op.nonlinear_solver)
 
             # call OpenMDAO methods
             for name, meta in op.input_meta.items():
