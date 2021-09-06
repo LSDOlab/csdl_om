@@ -4,7 +4,7 @@ import numpy as np
 from openmdao.api import Problem
 from openmdao.api import ImplicitComponent as OMImplicitComponent
 
-from csdl.core.subsystem import Subsystem
+from csdl.core.subgraph import Subgraph
 from csdl.core.variable import Variable
 from csdl.core.explicit_output import ExplicitOutput
 from csdl.core.implicit_output import ImplicitOutput
@@ -44,7 +44,7 @@ def _post_setup(func: Callable) -> Callable:
         # Collect residual expressions and their corresponding inputs
         # and outputs
         for res_expr in m.registered_outputs:
-            if isinstance(res_expr, Subsystem) == False and isinstance(
+            if isinstance(res_expr, Subgraph) == False and isinstance(
                     res_expr, ExplicitOutput) == False:
                 # inputs for this residual only
                 in_exprs = set(collect_input_exprs([], res_expr, res_expr))
@@ -101,7 +101,7 @@ def _post_setup(func: Callable) -> Callable:
 
         # set initial values for inputs and output
         for res_expr in self.model.registered_outputs:
-            if isinstance(res_expr, Subsystem) == False and isinstance(
+            if isinstance(res_expr, Subgraph) == False and isinstance(
                     res_expr, ExplicitOutput) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 if len(self.model.out_vals) == 0:
@@ -162,7 +162,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
 
     def _set_values(self, inputs, outputs):
         for res_expr in self.model.registered_outputs:
-            if isinstance(res_expr, Subsystem) == False and isinstance(
+            if isinstance(res_expr, Subgraph) == False and isinstance(
                     res_expr, ExplicitOutput) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 self.prob[out_name] = outputs[out_name]
@@ -195,7 +195,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
 
     def solve_nonlinear(self, inputs, outputs):
         for res_expr in self.model.registered_outputs:
-            if isinstance(res_expr, Subsystem) == False and isinstance(
+            if isinstance(res_expr, Subgraph) == False and isinstance(
                     res_expr, ExplicitOutput) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 shape = res_expr.shape
@@ -241,7 +241,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
         )
 
         for res_expr in self.model.registered_outputs:
-            if isinstance(res_expr, Subsystem) == False:
+            if isinstance(res_expr, Subgraph) == False:
                 res_name = res_expr.name
                 out_name = self.model.res_out_map[res_name]
                 for in_expr in self.all_inputs[out_name]:
