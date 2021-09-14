@@ -13,9 +13,5 @@ setup(
         'dash-daq==0.1.0',
         'pint',
         'guppy3',
-        'sphinx-rtd-theme',
-        'sphinx-code-include',
-        'jupyter-sphinx',
-        'numpydoc',
     ],
 )
