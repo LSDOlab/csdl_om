@@ -34,6 +34,7 @@ class Simulator(SimulatorBase):
         self.implicit_model_types = dict()
         self.iter = 0
         self.data_dir = None
+        self._totals = dict()
         if isinstance(model, Model):
             # ==============================================================
             # Front end defines Intermediate Representation (IR)
