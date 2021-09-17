@@ -409,3 +409,53 @@ class Simulator(SimulatorBase):
 
     def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
         assert_check_partials(result, atol=atol, rtol=rtol)
+
+    def objective(self):
+        return self.prob.driver.get_objective_values()
+
+    def design_variables(self):
+        return self.prob.driver.get_design_var_values()
+
+    def constraints(self):
+        return self.prob.driver.get_constraint_values()
+
+    def implicit_outputs(self):
+        """
+        Method to provide optimizer with implicit_outputs
+        """
+        raise NotImplementedError(msg)
+
+    def residuals(self):
+        """
+        Method to provide optimizer with residuals
+        """
+        raise NotImplementedError(msg)
+
+    def compute_total_derivatives(self):
+        self._totals = self.prob.compute_totals()
+        return self._totals
+
+    def objective_gradient(self):
+        obj = self.objective().keys()[0]
+
+        g = dict()
+        for k, v in self._totals.items():
+            if obj == k[0]:
+                g[k] = v
+        return g
+
+    def constraint_jacobian(self):
+        obj = self.objective().keys()[0]
+
+        j = dict()
+        for k, v in self._totals.items():
+            if obj != k[0]:
+                j[k] = v
+        return j
+
+    def residuals_jacobian(self):
+        """
+        Method to provide optimizer with total derivatives of
+        residuals with respect to design variables
+        """
+        raise NotImplementedError(msg)
