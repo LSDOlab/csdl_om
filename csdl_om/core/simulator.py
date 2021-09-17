@@ -208,14 +208,17 @@ class Simulator(SimulatorBase):
         # run model
         self.prob.model.run_solve_nonlinear()
 
-        # save data
+        # collect data
         data = dict()
+        if var_names is not None:
+            for var_name in var_names:
+                data[var_name] = self[var_name]
+
+        # save data to file
         if self.data_dir is not None:
             # create path for data file for this run
             data_path = self.data_dir + str(self.iter) + '-data.pkl'
             # collect data from run
-            for var_name in var_names:
-                data[var_name] = self[var_name]
             # write data to file
             with open(data_path, 'wb') as handle:
                 pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
