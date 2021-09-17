@@ -12,12 +12,16 @@ from csdl import (
 from openmdao.api import Problem, Group, IndepVarComp
 from openmdao.utils.assert_utils import assert_check_partials
 from openmdao.core.constants import _DEFAULT_OUT_STREAM
-from typing import Callable, Dict, Tuple, List, Union
+from openmdao.recorders.recording_manager import record_model_options
 from csdl_om.utils.create_std_component import create_std_component
 from csdl_om.utils.create_custom_component import create_custom_component
 from csdl_om.utils.create_implicit_component import create_implicit_component
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
+from datetime import datetime
+from platform import system
+import pickle
+import os
 
 
 class Simulator(SimulatorBase):
@@ -28,6 +32,8 @@ class Simulator(SimulatorBase):
                 .format(mode))
         self.reorder = reorder
         self.implicit_model_types = dict()
+        self.iter = 0
+        self.data_dir = None
         if isinstance(model, Model):
             # ==============================================================
             # Front end defines Intermediate Representation (IR)
@@ -90,8 +96,125 @@ class Simulator(SimulatorBase):
     def __setitem__(self, key, val):
         self.prob[key] = val
 
-    def run(self):
-        self.prob.run_model()
+    def run(
+        self,
+        restart=True,
+        path=None,
+        var_names=None,
+    ):
+        """
+        Run model.
+
+        **Parameters**
+
+        restart: bool
+
+            Whether to restart iteration count. Default is true.
+            When solving an optimization problem using `Simulator`
+            object, set to false after first iteration.
+
+        path: str
+
+            Path to store data for current iteration.
+            If None, no data will be recorded.
+            If `path` is specified by command line, `path` option will
+            be overridden.
+            Directory with date and time of first run will be appended
+            to path.
+            Data file name will be prepended with iteration number
+            (starts at 0)
+
+            ```py
+            sim.run(path="path/to/directory")
+            ```
+
+            Will make the following data file:
+
+            ```sh
+            path/to/directory/YYYY-MM-DD-HH:MM:SS/0-data.pkl
+            ```
+
+        var_names: Iterable
+
+            Names of variables to save to disk.
+
+        **Returns**
+
+        `Dict[str, np.ndarray]`
+
+            Dictionary of values accessible after each run.
+            If `var_names` is `None`, then dictionary will be empty.
+            Useful for generating plots during optimization.
+        """
+
+        if restart is True:
+            # restart iteration count
+            self.iter = 0
+
+            # store path to write data
+            if path is not None:
+                if var_names is None:
+                    raise ValueError(
+                        "Variable names to save are required when data path is supplied"
+                    )
+
+                # detect home directory
+                if path[0] == '~':
+                    self.data_dir = os.path.expanduser('~') + path[1:]
+                elif path[:5] == '$HOME':
+                    self.data_dir = os.path.expanduser('~') + path[5:]
+
+                # make directory with first run start date and time
+                now = datetime.now().strftime("%Y-%M-%d-%H:%M:%S")
+                if path[-1] == '/' or path[-1] == '\\':
+                    self.data_dir = path + now
+                    if system() == 'Windows':
+                        self.data_dir += '\\'
+                    else:
+                        self.data_dir += '/'
+                elif system() == 'Windows':
+                    self.data_dir = path + '\\' + now + '\\'
+                else:
+                    self.data_dir = path + '/' + now + '/'
+            # else:
+            #     try:
+            #         import sys
+            #         print(sys.argv)
+            #         print('SYS ARGV 1', sys.argv[1])
+            #         # self.data_dir = sys.argv[1]
+            #     except:
+            #         pass
+            # tell user where data is stored
+            print('Data for this run/set of runs is located in\n')
+            print(self.data_dir)
+
+            # OpenMDAO Problem.run_model stuff
+            if self.prob.model.iter_count > 0:
+                self.prob.model._reset_iter_counts()
+            self.prob.final_setup()
+            self.prob._run_counter += 1
+            record_model_options(self.prob, self.prob._run_counter)
+            self.prob.model._clear_iprint()
+
+        # run model
+        self.prob.model.run_solve_nonlinear()
+
+        # save data
+        data = dict()
+        if self.data_dir is not None:
+            # create path for data file for this run
+            data_path = self.data_dir + str(self.iter) + '-data.pkl'
+            # collect data from run
+            for var_name in var_names:
+                data[var_name] = self[var_name]
+            # write data to file
+            with open(data_path, 'wb') as handle:
+                pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # update iteration count
+        self.iter += 1
+
+        return data
 
     def visualize_model(self):
         from openmdao.api import n2
