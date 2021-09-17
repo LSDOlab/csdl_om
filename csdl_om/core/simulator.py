@@ -99,7 +99,7 @@ class Simulator(SimulatorBase):
     def run(
         self,
         restart=True,
-        path=None,
+        data_dir=None,
         var_names=None,
     ):
         """
@@ -113,11 +113,11 @@ class Simulator(SimulatorBase):
             When solving an optimization problem using `Simulator`
             object, set to false after first iteration.
 
-        path: str
+        data_dir: str
 
             Path to store data for current iteration.
             If None, no data will be recorded.
-            If `path` is specified by command line, `path` option will
+            If `data_dir` is specified by command line, `data_dir` option will
             be overridden.
             Directory with date and time of first run will be appended
             to path.
@@ -128,11 +128,20 @@ class Simulator(SimulatorBase):
             sim.run(path="path/to/directory")
             ```
 
-            Will make the following data file:
+            Will make the following data directory:
 
             ```sh
-            path/to/directory/YYYY-MM-DD-HH:MM:SS/0-data.pkl
+            path/to/directory/YYYY-MM-DD-HH:MM:SS/
             ```
+
+            containing files:
+
+            ```sh
+            path/to/directory/YYYY-MM-DD-HH:MM:SS/n-data.pkl
+            ```
+
+            where `n` is the iteration number, starting at `0`.
+
 
         var_names: Iterable
 
@@ -152,30 +161,30 @@ class Simulator(SimulatorBase):
             self.iter = 0
 
             # store path to write data
-            if path is not None:
+            if data_dir is not None:
                 if var_names is None:
                     raise ValueError(
                         "Variable names to save are required when data path is supplied"
                     )
 
                 # detect home directory
-                if path[0] == '~':
-                    self.data_dir = os.path.expanduser('~') + path[1:]
-                elif path[:5] == '$HOME':
-                    self.data_dir = os.path.expanduser('~') + path[5:]
+                if data_dir[0] == '~':
+                    self.data_dir = os.path.expanduser('~') + data_dir[1:]
+                elif data_dir[:5] == '$HOME':
+                    self.data_dir = os.path.expanduser('~') + data_dir[5:]
 
                 # make directory with first run start date and time
                 now = datetime.now().strftime("%Y-%M-%d-%H:%M:%S")
-                if path[-1] == '/' or path[-1] == '\\':
-                    self.data_dir = path + now
+                if data_dir[-1] == '/' or data_dir[-1] == '\\':
+                    self.data_dir = data_dir + now
                     if system() == 'Windows':
                         self.data_dir += '\\'
                     else:
                         self.data_dir += '/'
                 elif system() == 'Windows':
-                    self.data_dir = path + '\\' + now + '\\'
+                    self.data_dir = data_dir + '\\' + now + '\\'
                 else:
-                    self.data_dir = path + '/' + now + '/'
+                    self.data_dir = data_dir + '/' + now + '/'
             # else:
             #     try:
             #         import sys
@@ -360,6 +369,8 @@ class Simulator(SimulatorBase):
                 cache_linear_solution=objective['cache_linear_solution'],
             )
         for name, meta in model.constraints.items():
+            print(name)
+            print(meta)
             group.add_constraint(name, **meta)
         return group
 
