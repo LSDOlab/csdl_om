@@ -195,8 +195,8 @@ class Simulator(SimulatorBase):
             #     except:
             #         pass
             # tell user where data is stored
-            print('Data for this run/set of runs is located in\n')
-            print(self.data_dir)
+                print('Data for this run/set of runs is located in\n')
+                print(self.data_dir)
 
             # OpenMDAO Problem.run_model stuff
             if self.prob.model.iter_count > 0:
