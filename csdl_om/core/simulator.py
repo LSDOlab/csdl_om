@@ -229,7 +229,7 @@ class Simulator(SimulatorBase):
 
         return data
 
-    def visualize_model(self):
+    def visualize_implementation(self):
         from openmdao.api import n2
         self.prob.run_model()
         n2(self.prob)

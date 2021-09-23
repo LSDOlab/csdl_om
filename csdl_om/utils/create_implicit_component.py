@@ -127,7 +127,7 @@ def create_implicit_component(
                             pass
                 comp.sim[implicit_output_name] = implicit_output.val
                 if implicit_model.visualize is True:
-                    comp.sim.visualize_model()
+                    comp.sim.visualize_implementation()
 
         def apply_nonlinear(comp, inputs, outputs, residuals):
             comp._set_values(inputs, outputs)
