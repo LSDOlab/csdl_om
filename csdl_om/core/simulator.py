@@ -22,6 +22,8 @@ from datetime import datetime
 from platform import system
 import pickle
 import os
+from typing import Dict, Any, Tuple
+from collections import OrderedDict
 
 
 class Simulator(SimulatorBase):
@@ -34,7 +36,7 @@ class Simulator(SimulatorBase):
         self.implicit_model_types = dict()
         self.iter = 0
         self.data_dir = None
-        self._totals = dict()
+        self._totals: OrderedDict = OrderedDict()
         if isinstance(model, Model):
             # ==============================================================
             # Front end defines Intermediate Representation (IR)
@@ -411,52 +413,63 @@ class Simulator(SimulatorBase):
     def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
         assert_check_partials(result, atol=atol, rtol=rtol)
 
-    def objective(self):
-        return self.prob.driver.get_objective_values()
+    def objective(self) -> Dict[str, Any]:
+        objectives = self.prob.model.get_objectives()
+        try:
+            return list(objectives.values())[0]
+        except:
+            raise ValueError(
+                "Objective not defined for this Simulator."
+                "If defining a feasiblity problem, define an objective with constant value."
+            )
 
-    def design_variables(self):
-        return self.prob.driver.get_design_var_values()
+    def design_variables(self) -> OrderedDict[str, Dict[str, Any]]:
+        return self.prob.model.get_design_variables()
 
-    def constraints(self):
-        return self.prob.driver.get_constraint_values()
+    def constraints(self) -> OrderedDict[str, Dict[str, Any]]:
+        return self.prob.model.get_constraints()
 
-    def implicit_outputs(self):
-        """
-        Method to provide optimizer with implicit_outputs
-        """
-        raise NotImplementedError(msg)
+    # def implicit_outputs(self):
+    #     """
+    #     Method to provide optimizer with implicit_outputs
+    #     """
+    #     raise NotImplementedError(msg)
 
-    def residuals(self):
-        """
-        Method to provide optimizer with residuals
-        """
-        raise NotImplementedError(msg)
+    # def residuals(self):
+    #     """
+    #     Method to provide optimizer with residuals
+    #     """
+    #     raise NotImplementedError(msg)
 
-    def compute_total_derivatives(self):
+    def compute_total_derivatives(self) -> OrderedDict[str, Any]:
         self._totals = self.prob.compute_totals()
         return self._totals
 
-    def objective_gradient(self):
-        obj = self.objective().keys()[0]
+    def objective_gradient(self) -> OrderedDict[Tuple[str, str], Any]:
+        obj = self.objective()
+        obj_name = list(obj.keys())[0]
+        wrt = list(self.design_variables().keys())
 
-        g = dict()
-        for k, v in self._totals.items():
-            if obj == k[0]:
-                g[k] = v
-        return g
+        gradient = OrderedDict()
+        for w in wrt:
+            k = (obj_name, w)
+            gradient[k] = self._totals[k]
+        return gradient
 
-    def constraint_jacobian(self):
-        obj = self.objective().keys()[0]
+    def constraint_jacobian(self) -> OrderedDict[Tuple[str, str], Any]:
+        obj = self.objective()
+        obj_name = list(obj.keys())[0]
 
-        j = dict()
-        for k, v in self._totals.items():
-            if obj != k[0]:
-                j[k] = v
-        return j
+        # TODO: will need to modify for SURF
+        jacobian = OrderedDict()
+        for (of, wrt), v in self._totals.items():
+            if of != obj_name:
+                jacobian[of, wrt] = v
+        return jacobian
 
-    def residuals_jacobian(self):
-        """
-        Method to provide optimizer with total derivatives of
-        residuals with respect to design variables
-        """
-        raise NotImplementedError(msg)
+    # def residuals_jacobian(self):
+    #     """
+    #     Method to provide optimizer with total derivatives of
+    #     residuals with respect to design variables
+    #     """
+    #     raise NotImplementedError(msg)
