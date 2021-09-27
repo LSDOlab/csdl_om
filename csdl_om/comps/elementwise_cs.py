@@ -34,6 +34,7 @@ class ElementwiseCS(ExplicitComponent):
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
 
         # compute function
+        print(compute_string)
         exec(compute_string)
         outputs[out_name] = eval(out_name)
 

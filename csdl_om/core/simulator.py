@@ -1,15 +1,16 @@
 from csdl import (
     Model,
-    ImplicitModel,
+    ImplicitOperation,
     Operation,
     StandardOperation,
     CustomOperation,
     Subgraph,
-    ExplicitOperation,
-    ImplicitOperation,
+    CustomExplicitOperation,
+    CustomImplicitOperation,
     SimulatorBase,
+    BracketedSearchOperation,
 )
-from openmdao.api import Problem, Group, IndepVarComp
+from openmdao.api import Problem, Group, IndepVarComp, ImplicitComponent
 from openmdao.utils.assert_utils import assert_check_partials
 from openmdao.core.constants import _DEFAULT_OUT_STREAM
 from openmdao.recorders.recording_manager import record_model_options
@@ -27,12 +28,15 @@ from collections import OrderedDict
 
 
 class Simulator(SimulatorBase):
-    def __init__(self, model, mode='auto', reorder=False):
+    def __init__(
+        self,
+        model,
+        mode='auto',
+    ):
         if mode not in ['auto', 'fwd', 'rev']:
             raise ValueError(
                 'Invalid option for `mode`, {}, must be \'auto\', \'fwd\', or \'rev\'.'
                 .format(mode))
-        self.reorder = reorder
         self.implicit_model_types = dict()
         self.iter = 0
         self.data_dir = None
@@ -55,19 +59,10 @@ class Simulator(SimulatorBase):
                 model,
                 None,
             ))
-            self.prob.setup(force_alloc_complex=True, mode=mode)
-        elif isinstance(model, ImplicitModel):
-            self.prob = Problem()
-            self.prob.model.add_subsystem(
-                'model',
-                create_implicit_component(
-                    self.implicit_model_types,
-                    model,
-                ),
-                promotes=['*'],
+            self.prob.setup(
+                force_alloc_complex=True,
+                mode=mode,
             )
-            # TODO: why force_alloc_complex=False ??
-            self.prob.setup(force_alloc_complex=False, mode=mode)
         elif isinstance(model, CustomOperation):
             self.prob = Problem()
             # create Component
@@ -79,7 +74,10 @@ class Simulator(SimulatorBase):
                 ),
                 promotes=['*'],
             )
-            self.prob.setup(force_alloc_complex=True, mode=mode)
+            self.prob.setup(
+                force_alloc_complex=True,
+                mode=mode,
+            )
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
@@ -231,10 +229,20 @@ class Simulator(SimulatorBase):
 
         return data
 
-    def visualize_implementation(self):
+    def visualize_implementation(self, recursive=False):
         from openmdao.api import n2
+        from time import sleep
         self.prob.run_model()
         n2(self.prob)
+        # need this delay so that a browser tab opens for each n2
+        # diagram before the next n2 diagram gets generated
+        sleep(1)
+        if recursive is True:
+            for subsys in self.prob.model._subsystems_allprocs.values():
+                # TODO: or bracketed search component
+                if isinstance(subsys.system, ImplicitComponent):
+                    subsys.system.sim.visualize_implementation(
+                        recursive=recursive)
 
     def build_group(
         self,
@@ -275,8 +283,8 @@ class Simulator(SimulatorBase):
         # Add design variables; CSDL has already checked that all
         # design variables that have been added are inputs created by
         # user.
-        for name in model.design_variables.keys():
-            group.add_design_var(name)
+        for k, v in model.design_variables.keys():
+            group.add_design_var(k, **v)
 
         # ==============================================================
         # Add components corresponding to operations; This is the main
@@ -287,7 +295,7 @@ class Simulator(SimulatorBase):
         # Store operation types in a dictionary to avoid storing
         # duplicates
         operation_types = dict()
-        for node in reversed(model.sorted_expressions):
+        for node in reversed(model.sorted_nodes):
             sys = None
             promotes = ['*']
             promotes_inputs = None
@@ -302,11 +310,7 @@ class Simulator(SimulatorBase):
                 if isinstance(node.submodel, Model):
                     name = 'model' + node.name if node.name[
                         0] == '_' else node.name
-                elif isinstance(node.submodel,
-                                (ImplicitModel, ImplicitOperation)):
-                    name = 'implicit_op' + node.name if node.name[
-                        0] == '_' else node.name
-                elif isinstance(node.submodel, ExplicitOperation):
+                elif isinstance(node.submodel, CustomExplicitOperation):
                     name = 'op' + node.name if node.name[
                         0] == '_' else node.name
                 elif isinstance(node.submodel, StandardOperation):
@@ -319,15 +323,11 @@ class Simulator(SimulatorBase):
                         node.submodel,
                         objective,
                     )
+                # TODO: force users to add custom operations in a
+                # functional style only
                 if isinstance(node.submodel, CustomOperation):
                     # create Component
                     sys = create_custom_component(
-                        operation_types,
-                        node.submodel,
-                    )
-                if isinstance(node.submodel, ImplicitModel):
-                    # create Component from user-defined Operation
-                    sys = create_implicit_component(
                         operation_types,
                         node.submodel,
                     )
@@ -337,20 +337,22 @@ class Simulator(SimulatorBase):
                         0] == '_' else node.name
                     sys = create_std_component(node)
                 elif isinstance(node, CustomOperation):
-                    if isinstance(node, ImplicitOperation):
-                        name = 'implict_op' + node.name if node.name[
+                    if isinstance(node, CustomImplicitOperation):
+                        name = 'custom_implict_op' + node.name if node.name[
                             0] == '_' else node.name
                     else:
-                        name = 'op' + node.name if node.name[
+                        name = 'custom_op' + node.name if node.name[
                             0] == '_' else node.name
                     sys = create_custom_component(operation_types, node)
+                elif isinstance(node,
+                                (ImplicitOperation, BracketedSearchOperation)):
+                    name = 'implicit_op' + node.name if node.name[
+                        0] == '_' else node.name
+                    sys = create_implicit_component(node)
                 else:
                     raise TypeError(node.name +
                                     " is not a recognized Operation object")
-            elif isinstance(node, ImplicitModel):
-                name = 'implicit_model' + node.name if node.name[
-                    0] == '_' else node.name
-                sys = create_implicit_component(operation_types, node)
+
             if sys is not None:
                 group.add_subsystem(
                     name,
@@ -359,6 +361,7 @@ class Simulator(SimulatorBase):
                     promotes_inputs=promotes_inputs,
                     promotes_outputs=promotes_outputs,
                 )
+
         # issue connections
         for (a, b) in model.connections:
             group.connect(a, b)

@@ -1,5 +1,5 @@
 from csdl.utils.parameters import Parameters
-from csdl import CustomOperation, ExplicitOperation, ImplicitOperation
+from csdl import CustomOperation, CustomExplicitOperation, CustomImplicitOperation
 from openmdao.api import ExplicitComponent, ImplicitComponent
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
@@ -103,7 +103,7 @@ def create_custom_component(operation_types, op: CustomOperation):
                         allow_none=v['allow_none'],
                     )
 
-            if isinstance(op, ExplicitOperation):
+            if isinstance(op, CustomExplicitOperation):
                 component_class_name = 'CustomExplicitComponent' + str(
                     op._count)
 
