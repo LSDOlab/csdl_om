@@ -63,94 +63,87 @@ def create_implicit_component(
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
 
-        # exposed intermediate variables are outputs
-        for intermediate in intermediate_outputs:
-            comp.add_output(
-                intermediate.name,
-                val=intermediate.val,
-                shape=intermediate.shape,
-                units=intermediate.units,
-                desc=intermediate.desc,
-                tags=intermediate.tags,
-                shape_by_conn=intermediate.shape_by_conn,
-                copy_shape=intermediate.copy_shape,
-                # TODO: figure out how to specify these options in CSDL
-                # res_units=state.res_units,
-                # lower=state.lower,
-                # upper=state.upper,
-                # ref=state.ref,
-                # ref0=state.ref0,
-                # res_ref=state.res_ref,
-            )
-            comp.declare_partials(
-                of=intermediate.name,
-                wrt=intermediate.name,
-            )
-        for state in states:
-            state_name = state.name
-
-            try:
+        for out in implicit_operation.outs:
+            if out.name in expose_set:
+                # exposed intermediate variables are outputs
                 comp.add_output(
-                    state_name,
-                    val=state.val,
-                    shape=state.shape,
-                    units=state.units,
-                    desc=state.desc,
-                    tags=state.tags,
-                    shape_by_conn=state.shape_by_conn,
-                    copy_shape=state.copy_shape,
-                    # TODO: figure out how to specify these options in CSDL
-                    # res_units=state.res_units,
-                    # lower=state.lower,
-                    # upper=state.upper,
-                    # ref=state.ref,
-                    # ref0=state.ref0,
-                    # res_ref=state.res_ref,
+                    out.name,
+                    val=out.val,
+                    shape=out.shape,
+                    units=out.units,
+                    desc=out.desc,
+                    tags=out.tags,
+                    shape_by_conn=out.shape_by_conn,
+                    copy_shape=out.copy_shape,
                 )
-            except:
-                pass
-
-            try:
-                # Declare derivatives of residuals wrt implicit outputs
-                # TODO: sparsity pattern?
-                for other_state in states:
-                    comp.declare_partials(
-                        of=state_name,
-                        wrt=other_state.name,
+                comp.declare_partials(
+                    of=out.name,
+                    wrt=out.name,
+                )
+            elif out.name in state_names:
+                state_name = out.name
+                try:
+                    # states are implicit outputs
+                    comp.add_output(
+                        out.name,
+                        val=out.val,
+                        shape=out.shape,
+                        units=out.units,
+                        desc=out.desc,
+                        tags=out.tags,
+                        shape_by_conn=out.shape_by_conn,
+                        copy_shape=out.copy_shape,
+                        res_units=out.res_units,
+                        lower=out.lower,
+                        upper=out.upper,
+                        ref=out.ref,
+                        ref0=out.ref0,
+                        res_ref=out.res_ref,
                     )
-            except:
-                pass
+                except:
+                    pass
 
-            for in_var in out_in_map[state_name]:
-                in_name = in_var.name
-                if in_name not in state_names:
-                    try:
-                        comp.add_input(
-                            in_name,
-                            val=in_var.val,
-                            shape=in_var.shape,
-                            src_indices=in_var.src_indices,
-                            flat_src_indices=in_var.flat_src_indices,
-                            units=in_var.units,
-                            desc=in_var.desc,
-                            tags=in_var.tags,
-                            shape_by_conn=in_var.shape_by_conn,
-                            copy_shape=in_var.copy_shape,
-                        )
-
-                        # Internal model automates derivative
-                        # computation, so sparsity pattern does not
-                        # need to be declared here
+                try:
+                    # Declare derivatives of residuals wrt implicit outputs
+                    # TODO: sparsity pattern?
+                    for other_state in states:
                         comp.declare_partials(
                             of=state_name,
-                            wrt=in_name,
+                            wrt=other_state.name,
                         )
+                except:
+                    pass
 
-                        # set values
-                        comp.sim[in_name] = in_var.val
-                    except:
-                        pass
-            comp.sim[state_name] = state.val
+                for in_var in out_in_map[state_name]:
+                    in_name = in_var.name
+                    if in_name not in state_names:
+                        try:
+                            comp.add_input(
+                                in_name,
+                                val=in_var.val,
+                                shape=in_var.shape,
+                                src_indices=in_var.src_indices,
+                                flat_src_indices=in_var.flat_src_indices,
+                                units=in_var.units,
+                                desc=in_var.desc,
+                                tags=in_var.tags,
+                                shape_by_conn=in_var.shape_by_conn,
+                                copy_shape=in_var.copy_shape,
+                            )
+
+                            # Internal model automates derivative
+                            # computation, so sparsity pattern does not
+                            # need to be declared here
+                            comp.declare_partials(
+                                of=state_name,
+                                wrt=in_name,
+                            )
+
+                            # set values
+                            comp.sim[in_name] = in_var.val
+                        except:
+                            pass
+                comp.sim[state_name] = out.val
 
     def apply_nonlinear(comp, inputs, outputs, residuals):
         comp._set_values(inputs, outputs)

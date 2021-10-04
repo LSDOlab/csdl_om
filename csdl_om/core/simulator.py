@@ -396,8 +396,6 @@ class Simulator(SimulatorBase):
                 cache_linear_solution=objective['cache_linear_solution'],
             )
         for name, meta in model.constraints.items():
-            print(name)
-            print(meta)
             group.add_constraint(name, **meta)
         return group
 
