@@ -2,7 +2,7 @@ from csdl import Model
 from csdl.core.variable import Variable
 from csdl.core.subsystem import Subsystem
 from csdl.core.input import Input
-from csdl.core.explicit_output import ExplicitOutput
+from csdl.core.concatenation import Concatenation
 from openmdao.api import Problem, ExplicitComponent
 from typing import Dict, Set, Tuple, Callable
 from csdl.utils.collect_input_exprs import collect_input_exprs

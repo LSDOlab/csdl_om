@@ -1,15 +1,20 @@
 from csdl import (
     Model,
-    ImplicitModel,
+    ImplicitOperation,
     Operation,
     StandardOperation,
     CustomOperation,
     Subgraph,
-    ExplicitOperation,
-    ImplicitOperation,
+    CustomExplicitOperation,
+    CustomImplicitOperation,
     SimulatorBase,
+    BracketedSearchOperation,
 )
-from openmdao.api import Problem, Group, IndepVarComp
+from numpy import isin
+from openmdao.api import Problem, Group, IndepVarComp, ImplicitComponent
+from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
+from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
+from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
 from openmdao.utils.assert_utils import assert_check_partials
 from openmdao.core.constants import _DEFAULT_OUT_STREAM
 from openmdao.recorders.recording_manager import record_model_options
@@ -22,22 +27,28 @@ from datetime import datetime
 from platform import system
 import pickle
 import os
+from typing import Dict, Any, Tuple
+from collections import OrderedDict
 
 
 class Simulator(SimulatorBase):
-    def __init__(self, model, mode='auto', reorder=False):
+    def __init__(
+        self,
+        model,
+        mode='auto',
+    ):
         if mode not in ['auto', 'fwd', 'rev']:
             raise ValueError(
                 'Invalid option for `mode`, {}, must be \'auto\', \'fwd\', or \'rev\'.'
                 .format(mode))
-        self.reorder = reorder
         self.implicit_model_types = dict()
         self.iter = 0
         self.data_dir = None
-        self._totals = dict()
+        self._totals: OrderedDict = OrderedDict()
         if isinstance(model, Model):
             # ==============================================================
             # Front end defines Intermediate Representation (IR)
+            # Middle end performs implementation-independent optimizations
             model.define()
             # ==============================================================
 
@@ -53,19 +64,10 @@ class Simulator(SimulatorBase):
                 model,
                 None,
             ))
-            self.prob.setup(force_alloc_complex=True, mode=mode)
-        elif isinstance(model, ImplicitModel):
-            self.prob = Problem()
-            self.prob.model.add_subsystem(
-                'model',
-                create_implicit_component(
-                    self.implicit_model_types,
-                    model,
-                ),
-                promotes=['*'],
+            self.prob.setup(
+                force_alloc_complex=True,
+                mode=mode,
             )
-            # TODO: why force_alloc_complex=False ??
-            self.prob.setup(force_alloc_complex=False, mode=mode)
         elif isinstance(model, CustomOperation):
             self.prob = Problem()
             # create Component
@@ -77,7 +79,10 @@ class Simulator(SimulatorBase):
                 ),
                 promotes=['*'],
             )
-            self.prob.setup(force_alloc_complex=True, mode=mode)
+            self.prob.setup(
+                force_alloc_complex=True,
+                mode=mode,
+            )
         elif isinstance(model, Operation):
             raise NotImplementedError(
                 "CSDL-OM is not yet ready to accept model definitions "
@@ -229,10 +234,20 @@ class Simulator(SimulatorBase):
 
         return data
 
-    def visualize_model(self):
+    def visualize_implementation(self, recursive=False):
         from openmdao.api import n2
+        from time import sleep
         self.prob.run_model()
         n2(self.prob)
+        # need this delay so that a browser tab opens for each n2
+        # diagram before the next n2 diagram gets generated
+        sleep(1)
+        if recursive is True:
+            for subsys in self.prob.model._subsystems_allprocs.values():
+                # TODO: or bracketed search component
+                if isinstance(subsys.system, ImplicitComponent):
+                    subsys.system.sim.visualize_implementation(
+                        recursive=recursive)
 
     def build_group(
         self,
@@ -247,11 +262,6 @@ class Simulator(SimulatorBase):
 
         # Build system from IR
         group = Group()
-        if model.linear_solver is not None:
-            group._linear_solver = construct_linear_solver(model.linear_solver)
-        if model.nonlinear_solver is not None:
-            group._nonlinear_solver = construct_nonlinear_solver(
-                model.nonlinear_solver)
 
         # OpenMDAO represents top level system inputs using the concept
         # of an independent variable, so we add an independent variable
@@ -273,8 +283,8 @@ class Simulator(SimulatorBase):
         # Add design variables; CSDL has already checked that all
         # design variables that have been added are inputs created by
         # user.
-        for name in model.design_variables.keys():
-            group.add_design_var(name)
+        for k, v in model.design_variables.keys():
+            group.add_design_var(k, **v)
 
         # ==============================================================
         # Add components corresponding to operations; This is the main
@@ -285,7 +295,7 @@ class Simulator(SimulatorBase):
         # Store operation types in a dictionary to avoid storing
         # duplicates
         operation_types = dict()
-        for node in reversed(model.sorted_expressions):
+        for node in reversed(model.sorted_nodes):
             sys = None
             promotes = ['*']
             promotes_inputs = None
@@ -300,11 +310,7 @@ class Simulator(SimulatorBase):
                 if isinstance(node.submodel, Model):
                     name = 'model' + node.name if node.name[
                         0] == '_' else node.name
-                elif isinstance(node.submodel,
-                                (ImplicitModel, ImplicitOperation)):
-                    name = 'implicit_op' + node.name if node.name[
-                        0] == '_' else node.name
-                elif isinstance(node.submodel, ExplicitOperation):
+                elif isinstance(node.submodel, CustomExplicitOperation):
                     name = 'op' + node.name if node.name[
                         0] == '_' else node.name
                 elif isinstance(node.submodel, StandardOperation):
@@ -317,15 +323,11 @@ class Simulator(SimulatorBase):
                         node.submodel,
                         objective,
                     )
+                # TODO: force users to add custom operations in a
+                # functional style only
                 if isinstance(node.submodel, CustomOperation):
                     # create Component
                     sys = create_custom_component(
-                        operation_types,
-                        node.submodel,
-                    )
-                if isinstance(node.submodel, ImplicitModel):
-                    # create Component from user-defined Operation
-                    sys = create_implicit_component(
                         operation_types,
                         node.submodel,
                     )
@@ -335,20 +337,41 @@ class Simulator(SimulatorBase):
                         0] == '_' else node.name
                     sys = create_std_component(node)
                 elif isinstance(node, CustomOperation):
-                    if isinstance(node, ImplicitOperation):
-                        name = 'implict_op' + node.name if node.name[
+                    if isinstance(node, CustomImplicitOperation):
+                        name = 'custom_implict_op' + node.name if node.name[
                             0] == '_' else node.name
                     else:
-                        name = 'op' + node.name if node.name[
+                        name = 'custom_op' + node.name if node.name[
                             0] == '_' else node.name
                     sys = create_custom_component(operation_types, node)
+                elif isinstance(node,
+                                (ImplicitOperation, BracketedSearchOperation)):
+                    name = 'implicit_op' + node.name if node.name[
+                        0] == '_' else node.name
+                    if isinstance(node, ImplicitOperation) and isinstance(
+                            node.nonlinear_solver,
+                        (NonlinearBlockGS, NonlinearBlockJac,
+                         NonlinearRunOnce)):
+                        sys = Group()
+                        sys.add_subsystem(
+                            name,
+                            create_implicit_component(node),
+                            promotes=['*'],
+                        )
+                    else:
+                        sys = create_implicit_component(node)
+                    if isinstance(node, ImplicitOperation):
+                        # NOTE: CSDL makes sure that we always have a
+                        # linear solver when it's required
+                        ls = construct_linear_solver(node.linear_solver)
+                        if ls is not None:
+                            sys.linear_solver = ls
+                        sys.nonlinear_solver = construct_nonlinear_solver(
+                            node.nonlinear_solver)
                 else:
                     raise TypeError(node.name +
                                     " is not a recognized Operation object")
-            elif isinstance(node, ImplicitModel):
-                name = 'implicit_model' + node.name if node.name[
-                    0] == '_' else node.name
-                sys = create_implicit_component(operation_types, node)
+
             if sys is not None:
                 group.add_subsystem(
                     name,
@@ -411,52 +434,63 @@ class Simulator(SimulatorBase):
     def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
         assert_check_partials(result, atol=atol, rtol=rtol)
 
-    def objective(self):
-        return self.prob.driver.get_objective_values()
+    def objective(self) -> Dict[str, Any]:
+        objectives = self.prob.model.get_objectives()
+        try:
+            return list(objectives.values())[0]
+        except:
+            raise ValueError(
+                "Objective not defined for this Simulator."
+                "If defining a feasiblity problem, define an objective with constant value."
+            )
 
-    def design_variables(self):
-        return self.prob.driver.get_design_var_values()
+    def design_variables(self) -> OrderedDict[str, Dict[str, Any]]:
+        return self.prob.model.get_design_variables()
 
-    def constraints(self):
-        return self.prob.driver.get_constraint_values()
+    def constraints(self) -> OrderedDict[str, Dict[str, Any]]:
+        return self.prob.model.get_constraints()
 
-    def implicit_outputs(self):
-        """
-        Method to provide optimizer with implicit_outputs
-        """
-        raise NotImplementedError(msg)
+    # def implicit_outputs(self):
+    #     """
+    #     Method to provide optimizer with implicit_outputs
+    #     """
+    #     raise NotImplementedError(msg)
 
-    def residuals(self):
-        """
-        Method to provide optimizer with residuals
-        """
-        raise NotImplementedError(msg)
+    # def residuals(self):
+    #     """
+    #     Method to provide optimizer with residuals
+    #     """
+    #     raise NotImplementedError(msg)
 
-    def compute_total_derivatives(self):
+    def compute_total_derivatives(self) -> OrderedDict[str, Any]:
         self._totals = self.prob.compute_totals()
         return self._totals
 
-    def objective_gradient(self):
-        obj = self.objective().keys()[0]
+    def objective_gradient(self) -> OrderedDict[Tuple[str, str], Any]:
+        obj = self.objective()
+        obj_name = list(obj.keys())[0]
+        wrt = list(self.design_variables().keys())
 
-        g = dict()
-        for k, v in self._totals.items():
-            if obj == k[0]:
-                g[k] = v
-        return g
+        gradient = OrderedDict()
+        for w in wrt:
+            k = (obj_name, w)
+            gradient[k] = self._totals[k]
+        return gradient
 
-    def constraint_jacobian(self):
-        obj = self.objective().keys()[0]
+    def constraint_jacobian(self) -> OrderedDict[Tuple[str, str], Any]:
+        obj = self.objective()
+        obj_name = list(obj.keys())[0]
 
-        j = dict()
-        for k, v in self._totals.items():
-            if obj != k[0]:
-                j[k] = v
-        return j
+        # TODO: will need to modify for SURF
+        jacobian = OrderedDict()
+        for (of, wrt), v in self._totals.items():
+            if of != obj_name:
+                jacobian[of, wrt] = v
+        return jacobian
 
-    def residuals_jacobian(self):
-        """
-        Method to provide optimizer with total derivatives of
-        residuals with respect to design variables
-        """
-        raise NotImplementedError(msg)
+    # def residuals_jacobian(self):
+    #     """
+    #     Method to provide optimizer with total derivatives of
+    #     residuals with respect to design variables
+    #     """
+    #     raise NotImplementedError(msg)
