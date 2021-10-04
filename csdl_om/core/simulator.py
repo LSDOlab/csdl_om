@@ -444,10 +444,10 @@ class Simulator(SimulatorBase):
                 "If defining a feasiblity problem, define an objective with constant value."
             )
 
-    def design_variables(self) -> OrderedDict[str, Dict[str, Any]]:
+    def design_variables(self) -> OrderedDict:
         return self.prob.model.get_design_variables()
 
-    def constraints(self) -> OrderedDict[str, Dict[str, Any]]:
+    def constraints(self) -> OrderedDict:
         return self.prob.model.get_constraints()
 
     # def implicit_outputs(self):
@@ -462,11 +462,11 @@ class Simulator(SimulatorBase):
     #     """
     #     raise NotImplementedError(msg)
 
-    def compute_total_derivatives(self) -> OrderedDict[str, Any]:
+    def compute_total_derivatives(self) -> OrderedDict:
         self._totals = self.prob.compute_totals()
         return self._totals
 
-    def objective_gradient(self) -> OrderedDict[Tuple[str, str], Any]:
+    def objective_gradient(self) -> OrderedDict:
         obj = self.objective()
         obj_name = list(obj.keys())[0]
         wrt = list(self.design_variables().keys())
@@ -477,7 +477,7 @@ class Simulator(SimulatorBase):
             gradient[k] = self._totals[k]
         return gradient
 
-    def constraint_jacobian(self) -> OrderedDict[Tuple[str, str], Any]:
+    def constraint_jacobian(self) -> OrderedDict:
         obj = self.objective()
         obj_name = list(obj.keys())[0]
 
