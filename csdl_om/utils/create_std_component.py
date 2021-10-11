@@ -153,6 +153,7 @@ op_comp_map[opclass] = lambda op: IndexedPassThrough(
     out_shape=op.outs[0].shape,
     indices=op.outs[0]._tgt_indices,
     vals=op.outs[0]._tgt_vals,
+    out_val=op.outs[0].val,  # default value for entire contatenation
 )
 
 opclass = decompose
