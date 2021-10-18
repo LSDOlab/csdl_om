@@ -20,9 +20,6 @@ def create_custom_component(operation_types, op: CustomOperation):
             for k, v in self.options._dict.items():
                 self.parameters._dict[k] = v
 
-            # run user-defined CustomOperation.define method
-            self._csdl_define()
-
             # assign solver to implicit component
             if isinstance(self, ImplicitComponent):
                 if op.linear_solver is not None:
@@ -86,9 +83,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                 # Component.initialize
                 self._declare_options()
 
-                # user-defined initialize
-                self._csdl_initialize()
-
                 # declare OpenMDAO options
                 for k, v in self.parameters._dict.items():
                     self.options.declare(
@@ -115,7 +109,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                         # equivalent type/signature in OpenMDAO
                         parameters=op.parameters,
                         _csdl_initialize=op.initialize,
-                        _csdl_define=op.define,
                         # user defined methods that do have
                         # equivalent signature in OpenMDAO
                         initialize=initialize,
@@ -142,7 +135,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                         # equivalent type/signature in OpenMDAO
                         parameters=op.parameters,
                         _csdl_initialize=op.initialize,
-                        _csdl_define=op.define,
                         # user defined methods that do have
                         # equivalent signature in OpenMDAO
                         initialize=initialize,
