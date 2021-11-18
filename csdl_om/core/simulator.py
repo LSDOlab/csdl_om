@@ -220,10 +220,18 @@ class Simulator(SimulatorBase):
         sleep(1)
         if recursive is True:
             for subsys in self.prob.model._subsystems_allprocs.values():
-                # TODO: or bracketed search component
                 if isinstance(subsys.system, ImplicitComponent):
                     subsys.system.sim.visualize_implementation(
                         recursive=recursive)
+                elif isinstance(subsys.system, Group):
+                    self._visualize_group(subsys.system)
+
+    def _visualize_group(self, group):
+        for subsys in group._subsystems_allprocs.values():
+            if isinstance(subsys.system, ImplicitComponent):
+                subsys.system.sim.visualize_implementation(recursive=True)
+            elif isinstance(subsys.system, Group):
+                self._visualize_group(subsys.system)
 
     def build_group(
         self,
