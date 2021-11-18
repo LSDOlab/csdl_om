@@ -283,7 +283,7 @@ class Simulator(SimulatorBase):
         # Add design variables; CSDL has already checked that all
         # design variables that have been added are inputs created by
         # user.
-        for k, v in model.design_variables.keys():
+        for k, v in model.design_variables.items():
             group.add_design_var(k, **v)
 
         # ==============================================================
