@@ -350,8 +350,9 @@ class Simulator(SimulatorBase):
                         ls = construct_linear_solver(node.linear_solver)
                         if ls is not None:
                             sys.linear_solver = ls
-                        sys.nonlinear_solver = construct_nonlinear_solver(
-                            node.nonlinear_solver)
+                        if node.nonlinear_solver is not None:
+                            sys.nonlinear_solver = construct_nonlinear_solver(
+                                node.nonlinear_solver)
                 else:
                     raise TypeError(node.name +
                                     " is not a recognized Operation object")
