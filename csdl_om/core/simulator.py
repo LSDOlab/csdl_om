@@ -45,56 +45,32 @@ class Simulator(SimulatorBase):
         self.iter = 0
         self.data_dir = None
         self._totals: OrderedDict = OrderedDict()
-        if isinstance(model, Model):
-            # ==============================================================
-            # Front end defines Intermediate Representation (IR)
-            # Middle end performs implementation-independent optimizations
-            model.define()
-            # ==============================================================
+        if not isinstance(model, Model):
+            raise TypeError(
+                "CSDL-OM only accepts CSDL Model specifications to construct a Simulator."
+            )
+        # ==============================================================
+        # Front end defines Intermediate Representation (IR)
+        # Middle end performs implementation-independent optimizations
+        model.define()
+        # ==============================================================
 
-            # ==========================================================
-            # Construct executable object; in the case of CSDL-OM, the
-            # executable object is a Python object (an object of
-            # OpenMDAO's Problem class) in main memory, as
-            # opposed to souce code in a compiled language like C/C++,
-            # or even a native binary.
-            # ==========================================================
+        # ==========================================================
+        # Construct executable object; in the case of CSDL-OM, the
+        # executable object is a Python object (an object of
+        # OpenMDAO's Problem class) in main memory, as
+        # opposed to souce code in a compiled language like C/C++,
+        # or even a native binary.
+        # ==========================================================
 
-            self.prob = Problem(self.build_group(
-                model,
-                None,
-            ))
-            self.prob.setup(
-                force_alloc_complex=True,
-                mode=mode,
-            )
-        elif isinstance(model, CustomOperation):
-            self.prob = Problem()
-            # create Component
-            self.prob.model.add_subsystem(
-                'model',
-                create_custom_component(
-                    dict(),
-                    model,
-                ),
-                promotes=['*'],
-            )
-            self.prob.setup(
-                force_alloc_complex=True,
-                mode=mode,
-            )
-        elif isinstance(model, Operation):
-            raise NotImplementedError(
-                "CSDL-OM is not yet ready to accept model definitions "
-                "from CSDL Operations other than CustomOperations. Future updates will enable "
-                "constructing OpenMDAO problems from simple model "
-                "definitions.")
-        else:
-            raise NotImplementedError(
-                "CSDL-OM is not yet ready to accept model definitions "
-                "outside of CSDL. Future updates will enable "
-                "constructing OpenMDAO problems from simple model "
-                "definitions.")
+        self.prob = Problem(self.build_group(
+            model,
+            None,
+        ))
+        self.prob.setup(
+            force_alloc_complex=True,
+            mode=mode,
+        )
 
     def __getitem__(self, key):
         return self.prob[key]
