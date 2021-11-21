@@ -64,24 +64,8 @@ def create_implicit_component(
         comp.sim = Simulator(implicit_operation._model, )
 
         for out in implicit_operation.outs:
-            if out.name in expose_set:
-                # exposed intermediate variables are outputs
-                comp.add_output(
-                    out.name,
-                    val=out.val,
-                    shape=out.shape,
-                    units=out.units,
-                    desc=out.desc,
-                    tags=out.tags,
-                    shape_by_conn=out.shape_by_conn,
-                    copy_shape=out.copy_shape,
-                )
-                comp.declare_partials(
-                    of=out.name,
-                    wrt=out.name,
-                )
-            elif out.name in state_names:
-                state_name = out.name
+            # STATES
+            if out.name in state_names:
                 try:
                     # states are implicit outputs
                     comp.add_output(
@@ -100,61 +84,80 @@ def create_implicit_component(
                         ref0=out.ref0,
                         res_ref=out.res_ref,
                     )
+
                 except:
                     pass
 
+            # EXPOSED
+            elif out.name in expose_set:
                 try:
-                    # Declare derivatives of residuals wrt implicit outputs
-                    # TODO: sparsity pattern?
-                    for other_state in states:
-                        comp.declare_partials(
-                            of=state_name,
-                            wrt=other_state.name,
-                        )
+                    # exposed intermediate variables are outputs
+                    comp.add_output(
+                        out.name,
+                        val=out.val,
+                        shape=out.shape,
+                        units=out.units,
+                        desc=out.desc,
+                        tags=out.tags,
+                        shape_by_conn=out.shape_by_conn,
+                        copy_shape=out.copy_shape,
+                    )
+                    # derivative of residual associated with
+                    # exposed variable wrt exposed variable
                 except:
                     pass
 
-                for in_var in out_in_map[state_name]:
+            for in_var in out_in_map[out.name]:
+                if in_var.name not in out_in_map.keys():
                     in_name = in_var.name
-                    if in_name not in state_names:
-                        try:
-                            comp.add_input(
-                                in_name,
-                                val=in_var.val,
-                                shape=in_var.shape,
-                                src_indices=in_var.src_indices,
-                                flat_src_indices=in_var.flat_src_indices,
-                                units=in_var.units,
-                                desc=in_var.desc,
-                                tags=in_var.tags,
-                                shape_by_conn=in_var.shape_by_conn,
-                                copy_shape=in_var.copy_shape,
-                            )
+                    try:
+                        comp.add_input(
+                            in_name,
+                            val=in_var.val,
+                            shape=in_var.shape,
+                            src_indices=in_var.src_indices,
+                            flat_src_indices=in_var.flat_src_indices,
+                            units=in_var.units,
+                            desc=in_var.desc,
+                            tags=in_var.tags,
+                            shape_by_conn=in_var.shape_by_conn,
+                            copy_shape=in_var.copy_shape,
+                        )
 
-                            # Internal model automates derivative
-                            # computation, so sparsity pattern does not
-                            # need to be declared here
-                            comp.declare_partials(
-                                of=state_name,
-                                wrt=in_name,
-                            )
+                        # set values
+                        comp.sim[in_name] = in_var.val
+                    except:
+                        pass
 
-                            # set values
-                            comp.sim[in_name] = in_var.val
-                        except:
-                            pass
-                comp.sim[state_name] = out.val
+        for out in implicit_operation.outs:
+            in_vars = out_in_map[out.name]
+            comp.declare_partials(
+                of=out.name,
+                wrt=out.name,
+            )
+            for in_var in in_vars:
+                if in_var in expose_set:
+                    comp.declare_partials(
+                        of=out.name,
+                        wrt=in_var.name,
+                        val=0.,
+                    )
+                else:
+                    comp.declare_partials(
+                        of=out.name,
+                        wrt=in_var.name,
+                    )
 
     def apply_nonlinear(comp, inputs, outputs, residuals):
         comp._set_values(inputs, outputs)
         comp.sim.run()
 
-        for residual_name, implicit_output in res_out_map.items():
-            residuals[implicit_output.name] = np.array(comp.sim[residual_name])
-
-        # update residuals for exposed intermediate variables
-        for e in expose_set:
-            residuals[e] = outputs[e] - np.array(comp.sim[residual_name])
+        for residual_name, state in res_out_map.items():
+            if state.name in expose_set:
+                residuals[state.name] = outputs[state.name] - np.array(
+                    comp.sim[residual_name])
+            else:
+                residuals[state.name] = np.array(comp.sim[residual_name])
 
     def linearize(comp, inputs, outputs, jacobian):
         comp._set_values(inputs, outputs)
@@ -167,26 +170,36 @@ def create_implicit_component(
 
         for residual in residuals:
             residual_name = residual.name
-            implicit_output_name = res_out_map[residual_name].name
+            state_name = res_out_map[residual_name].name
 
             # implicit output wrt inputs
-            for input_name in [
-                    i.name for i in out_in_map[implicit_output_name]
-            ]:
-                if input_name is not implicit_output_name:
-                    jacobian[implicit_output_name,
-                             input_name] = internal_model_jacobian[
+            for input_name in [i.name for i in out_in_map[state_name]]:
+                if input_name is not state_name:
+                    if state_name in expose_set:
+                        # compute derivative for residual associated
+                        # with exposed wrt argument
+                        jacobian[state_name,
+                                 input_name] = -internal_model_jacobian[
+                                     residual_name, input_name]
+                    else:
+                        # compute derivative for residual associated
+                        # with state wrt argument
+                        jacobian[state_name,
+                                 input_name] = internal_model_jacobian[
+                                     residual_name, input_name]
+                elif input_name in expose_set:
+                    jacobian[state_name,
+                             input_name] = -internal_model_jacobian[
                                  residual_name, input_name]
 
             # implicit output wrt corresponding residual
-            jacobian[implicit_output_name,
-                     implicit_output_name] = internal_model_jacobian[
-                         residual_name, implicit_output_name]
+            jacobian[state_name,
+                     state_name] = internal_model_jacobian[residual_name,
+                                                           state_name]
 
-            comp.derivs[implicit_output_name] = np.diag(
+            comp.derivs[state_name] = np.diag(
                 internal_model_jacobian[residual_name,
-                                        implicit_output_name]).reshape(
-                                            residual.shape)
+                                        state_name]).reshape(residual.shape)
 
     if isinstance(implicit_operation, ImplicitOperation):
         # Define new ImplicitComponent
