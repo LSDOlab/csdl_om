@@ -11,7 +11,8 @@ from csdl import (
     BracketedSearchOperation,
 )
 from numpy import isin
-from openmdao.api import Problem, Group, IndepVarComp, ImplicitComponent
+from csdl_om.core.problem import ProblemNew
+from openmdao.api import Group, IndepVarComp, ImplicitComponent
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
@@ -63,7 +64,7 @@ class Simulator(SimulatorBase):
         # or even a native binary.
         # ==========================================================
 
-        self.prob = Problem(self.build_group(
+        self.prob = ProblemNew(self.build_group(
             model,
             None,
         ))
@@ -470,6 +471,9 @@ class Simulator(SimulatorBase):
             if of != obj_name:
                 jacobian[of, wrt] = v
         return jacobian
+
+    def add_recorder(self, recorder):
+        self.prob.setup_save_data(recorder)
 
     # def residuals_jacobian(self):
     #     """
