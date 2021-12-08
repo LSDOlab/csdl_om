@@ -7,6 +7,8 @@ setup(
     ],
     install_requires=[
         'csdl<1',
+        # taking length of inputs.values() within components is broken
+        # in later versions of openmdao
         'openmdao==3.10.0',
         'numpy>=1.20,<1.21',
         'dash==1.2.0',

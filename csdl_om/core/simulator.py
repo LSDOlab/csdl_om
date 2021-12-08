@@ -29,9 +29,12 @@ import pickle
 import os
 from typing import Dict, Any, Tuple
 from collections import OrderedDict
+import time
 
 
 class Simulator(SimulatorBase):
+    REPORT_COMPILE_TIME_FRONT_END = True
+
     def __init__(
         self,
         model,
@@ -45,6 +48,7 @@ class Simulator(SimulatorBase):
         self.iter = 0
         self.data_dir = None
         self._totals: OrderedDict = OrderedDict()
+        self._reporting_time = False
         if not isinstance(model, Model):
             raise TypeError(
                 "CSDL-OM only accepts CSDL Model specifications to construct a Simulator."
@@ -52,7 +56,22 @@ class Simulator(SimulatorBase):
         # ==============================================================
         # Front end defines Intermediate Representation (IR)
         # Middle end performs implementation-independent optimizations
+        if Simulator.REPORT_COMPILE_TIME_FRONT_END is True:
+            start_front_end = time.time()
+            # prevent restarting timer for simulators inside implicit
+            # components
+            Simulator.REPORT_COMPILE_TIME_FRONT_END = False
+            # only top level simulator reports front end compile time
+            self._reporting_time = True
         model.define()
+
+        # report time
+        if self._reporting_time is True:
+            finish_front_end = time.time()
+            front_end_compile_time = finish_front_end - start_front_end
+            print('======== COMPILE TIME (FRONT END) =======')
+            print(front_end_compile_time, 's')
+            print('=========================================')
         # ==============================================================
 
         # ==========================================================
@@ -83,6 +102,7 @@ class Simulator(SimulatorBase):
         restart=True,
         data_dir=None,
         var_names=None,
+        time_run=False,
     ):
         """
         Run model.
@@ -137,7 +157,6 @@ class Simulator(SimulatorBase):
             If `var_names` is `None`, then dictionary will be empty.
             Useful for generating plots during optimization.
         """
-
         if restart is True:
             # restart iteration count
             self.iter = 0
@@ -187,6 +206,13 @@ class Simulator(SimulatorBase):
             record_model_options(self.prob, self.prob._run_counter)
             self.prob.model._clear_iprint()
 
+        if time_run is True:
+            try:
+                import time
+            except:
+                pass
+            start_run_time = time.time()
+
         # run model
         self.prob.model.run_solve_nonlinear()
 
@@ -205,15 +231,23 @@ class Simulator(SimulatorBase):
             with open(data_path, 'wb') as handle:
                 pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+        if time_run is True:
+            end_run_time = time.time()
+            total_run_time = end_run_time - start_run_time
+            print('======== TOTAL SIMULATION RUN TIME =======')
+            print(total_run_time, 's')
+            print('Iteration no.', self.iter)
+            print('==========================================')
+
         # update iteration count
         self.iter += 1
 
         return data
 
-    def visualize_implementation(self, recursive=False):
+    def visualize_implementation(self, recursive=False, **kwargs):
         from openmdao.api import n2
         from time import sleep
-        self.prob.run_model()
+        self.run(**kwargs)
         n2(self.prob)
         # need this delay so that a browser tab opens for each n2
         # diagram before the next n2 diagram gets generated
@@ -238,9 +272,23 @@ class Simulator(SimulatorBase):
         model,
         objective,
     ) -> Group:
+        """
+        `model: Model`
+
+        The `Model` used to build the `Simulator`
+
+        `objective: dict`
+
+        objective from parent model
+        """
+
+        # If model has objective and parent model also has
+        # objective, then there are multiple objectives; error
         if model.objective is not None and objective is not None:
             raise ValueError("Cannot define more than one objective")
 
+        # If parent model does not have objective, get objective from
+        # current model; may be None
         if objective is None:
             objective = model.objective
 
@@ -280,57 +328,66 @@ class Simulator(SimulatorBase):
         # duplicates
         operation_types = dict()
         for node in reversed(model.sorted_nodes):
-            sys = None
-            promotes = ['*']
-            promotes_inputs = None
-            promotes_outputs = None
-            name = ''
             # Create Component for Model or Operation added using
             # Model.add
             if isinstance(node, Subgraph):
                 promotes = node.promotes
-                promotes_inputs = node.promotes_inputs
-                promotes_outputs = node.promotes_outputs
                 if isinstance(node.submodel, Model):
-                    name = 'model' + node.name if node.name[
-                        0] == '_' else node.name
-                elif isinstance(node.submodel, CustomExplicitOperation):
-                    name = 'op' + node.name if node.name[
-                        0] == '_' else node.name
-                elif isinstance(node.submodel, StandardOperation):
-                    name = 'std_op' + node.name if node.name[
-                        0] == '_' else node.name
-
-                if isinstance(node.submodel, Model):
-                    # create Group
+                    name = name = type(
+                        node).__name__ + '_model' + node.name if node.name[
+                            0] == '_' else node.name
                     sys = self.build_group(
                         node.submodel,
                         objective,
                     )
-                # TODO: force users to add custom operations in a
-                # functional style only
-                if isinstance(node.submodel, CustomOperation):
-                    # create Component
-                    sys = create_custom_component(
-                        operation_types,
-                        node.submodel,
+                    group.add_subsystem(
+                        name,
+                        sys,
+                        promotes=node.promotes,
                     )
             elif isinstance(node, Operation):
                 if isinstance(node, StandardOperation):
-                    name = 'std_op' + node.name if node.name[
-                        0] == '_' else node.name
+                    name = name = type(
+                        node).__name__ + '_std_op' + node.name if node.name[
+                            0] == '_' else node.name
                     sys = create_std_component(node)
+                    group.add_subsystem(
+                        name,
+                        sys,
+                        promotes=['*'],
+                    )
                 elif isinstance(node, CustomOperation):
                     if isinstance(node, CustomImplicitOperation):
-                        name = 'custom_implict_op' + node.name if node.name[
+                        name = type(
+                            node
+                        ).__name__ + '_custom_implict_op' + node.name if node.name[
                             0] == '_' else node.name
                     else:
-                        name = 'custom_op' + node.name if node.name[
+                        name = type(
+                            node
+                        ).__name__ + '_custom_op' + node.name if node.name[
                             0] == '_' else node.name
                     sys = create_custom_component(operation_types, node)
+                    # TODO: don't promote, issue connections
+                    group.add_subsystem(
+                        name,
+                        sys,
+                        promotes=['*'],
+                    )
+                    # group.add_subsystem(
+                    #     name,
+                    #     sys,
+                    #     promotes=[],
+                    # )
+                    # for dep in zip(node.dependencies, node.input_meta.keys()):
+                    #     group.connect(dep.name, name +'.'+ key)
+                    #     # TODO: need to connect the outputs to
+                    #     # subsequent components...
                 elif isinstance(node,
                                 (ImplicitOperation, BracketedSearchOperation)):
-                    name = 'implicit_op' + node.name if node.name[
+                    name = type(
+                        node._model
+                    ).__name__ + '_implicit_op' + node.name if node.name[
                         0] == '_' else node.name
                     if isinstance(node, ImplicitOperation) and isinstance(
                             node.nonlinear_solver,
@@ -353,22 +410,23 @@ class Simulator(SimulatorBase):
                         if node.nonlinear_solver is not None:
                             sys.nonlinear_solver = construct_nonlinear_solver(
                                 node.nonlinear_solver)
+                    group.add_subsystem(
+                        name,
+                        sys,
+                        promotes=['*'],
+                    )
                 else:
                     raise TypeError(node.name +
                                     " is not a recognized Operation object")
 
-            if sys is not None:
-                group.add_subsystem(
-                    name,
-                    sys,
-                    promotes=promotes,
-                    promotes_inputs=promotes_inputs,
-                    promotes_outputs=promotes_outputs,
-                )
+        del operation_types
         # issue connections
+        # assume they are checked in CSDL compiler front end
         for (a, b) in model.connections:
             group.connect(a, b)
-        if objective is not None:
+
+        # if current model has objective, add objective
+        if model.objective is not None:
             group.add_objective(
                 objective['name'],
                 ref=objective['ref'],
@@ -380,6 +438,7 @@ class Simulator(SimulatorBase):
                 parallel_deriv_color=objective['parallel_deriv_color'],
                 cache_linear_solution=objective['cache_linear_solution'],
             )
+
         for name, meta in model.constraints.items():
             group.add_constraint(name, **meta)
         return group
@@ -399,6 +458,8 @@ class Simulator(SimulatorBase):
         force_dense=True,
         show_only_incorrect=False,
     ):
+        if self.iter == 0:
+            self.run()
         return self.prob.check_partials(
             out_stream=out_stream,
             includes=includes,

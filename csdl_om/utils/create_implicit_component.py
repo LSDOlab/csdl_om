@@ -57,8 +57,7 @@ def create_implicit_component(
             intermediate_name = intermediate.name
             comp.sim[intermediate_name] = outputs[intermediate_name]
 
-    # Define the setup method for the component class; applies to
-    # both explicit and implicit component subclass definitions
+    # Define the setup method for the component class
     def setup(comp):
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
@@ -107,46 +106,54 @@ def create_implicit_component(
                 except:
                     pass
 
-            for in_var in out_in_map[out.name]:
-                if in_var.name not in out_in_map.keys():
-                    in_name = in_var.name
-                    try:
-                        comp.add_input(
-                            in_name,
-                            val=in_var.val,
-                            shape=in_var.shape,
-                            src_indices=in_var.src_indices,
-                            flat_src_indices=in_var.flat_src_indices,
-                            units=in_var.units,
-                            desc=in_var.desc,
-                            tags=in_var.tags,
-                            shape_by_conn=in_var.shape_by_conn,
-                            copy_shape=in_var.copy_shape,
-                        )
+            if out.name in out_in_map.keys():
 
-                        # set values
-                        comp.sim[in_name] = in_var.val
-                    except:
-                        pass
+                for in_var in out_in_map[out.name]:
+                    in_name = in_var.name
+                    if in_name not in out_in_map.keys():
+                        # use try/except because multiple outputs can
+                        # depend on the same input
+                        try:
+                            comp.add_input(
+                                in_name,
+                                val=in_var.val,
+                                shape=in_var.shape,
+                                src_indices=in_var.src_indices,
+                                flat_src_indices=in_var.flat_src_indices,
+                                units=in_var.units,
+                                desc=in_var.desc,
+                                tags=in_var.tags,
+                                shape_by_conn=in_var.shape_by_conn,
+                                copy_shape=in_var.copy_shape,
+                            )
+
+                            # set values
+                            comp.sim[in_name] = in_var.val
+                        except:
+                            pass
 
         for out in implicit_operation.outs:
-            in_vars = out_in_map[out.name]
-            comp.declare_partials(
-                of=out.name,
-                wrt=out.name,
-            )
-            for in_var in in_vars:
-                if in_var in expose_set:
-                    comp.declare_partials(
-                        of=out.name,
-                        wrt=in_var.name,
-                        val=0.,
-                    )
-                else:
-                    comp.declare_partials(
-                        of=out.name,
-                        wrt=in_var.name,
-                    )
+            if out.name in out_in_map.keys():
+                # need to check if keys exist because exposed variables
+                # that residuals depend on will not be in out_in_map?
+                in_vars = out_in_map[out.name]
+                comp.declare_partials(
+                    of=out.name,
+                    wrt=out.name,
+                )
+                for in_var in in_vars:
+                    if in_var in expose_set or in_var.name in out_in_map.keys(
+                    ):
+                        comp.declare_partials(
+                            of=out.name,
+                            wrt=in_var.name,
+                            val=0.,
+                        )
+                    else:
+                        comp.declare_partials(
+                            of=out.name,
+                            wrt=in_var.name,
+                        )
 
     def apply_nonlinear(comp, inputs, outputs, residuals):
         comp._set_values(inputs, outputs)
