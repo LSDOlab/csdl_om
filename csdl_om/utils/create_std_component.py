@@ -541,14 +541,16 @@ op_comp_map[opclass] = lambda op: ReorderAxesComp(
 opclass = sum
 op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
     in_name=op.dependencies[0].name,
-    shape=op.outs[0].shape,
+    shape=op.dependencies[0].shape,
     out_name=op.outs[0].name,
     val=op.dependencies[0].val,
+    out_shape=op.outs[0].shape,
 ) if len(op.dependencies) == 1 else MultipleTensorSumComp(
     in_names=[var.name for var in op.dependencies],
-    shape=op.outs[0].shape,
+    shape=op.dependencies[0].shape,
     out_name=op.outs[0].name,
     vals=[var.val for var in op.dependencies],
+    out_shape=op.outs[0].shape,
 )) if op.literals['axes'] is None else (SingleTensorSumComp(
     in_name=op.dependencies[0].name,
     shape=op.dependencies[0].shape,
