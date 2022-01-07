@@ -1,8 +1,9 @@
 from csdl.utils.parameters import Parameters
 from csdl import CustomOperation, CustomExplicitOperation, CustomImplicitOperation
-from openmdao.api import ExplicitComponent, ImplicitComponent
+from openmdao.api import ExplicitComponent, ImplicitComponent, Component
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
+from typing import Dict
 # csdl-provided methods to be called by OpenMDAO; user is not allowed to
 # define these methods
 prohibited_methods = {
@@ -60,8 +61,9 @@ om_implicit_methods = set([
 ])
 
 
-def create_custom_component(operation_types, op: CustomOperation):
-    t = op  #type(op)
+def create_custom_component(operation_types: Dict[CustomOperation, Component],
+                            op: CustomOperation):
+    t = op
     if len(list(filter(lambda x: hasattr(op, x), prohibited_methods))) > 0:
         raise NameError(
             'In {} named {}, user has defined methods with forbidden names. The following method names are not allowed in CustomOperation subclasses: {}'

@@ -108,7 +108,10 @@ from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
 
 import numpy as np
 
-op_comp_map = dict()
+from typing import Dict
+from openmdao.api import ExplicitComponent
+
+op_comp_map: Dict[StandardOperation, ExplicitComponent] = dict()
 
 # Basic Elementwise Operations
 opclass = linear_combination

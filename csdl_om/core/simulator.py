@@ -10,9 +10,9 @@ from csdl import (
     SimulatorBase,
     BracketedSearchOperation,
 )
-from numpy import isin
+import numpy as np
 from csdl_om.core.problem import ProblemNew
-from openmdao.api import Group, IndepVarComp, ImplicitComponent
+from openmdao.api import Group, IndepVarComp, ImplicitComponent, Component
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
@@ -28,7 +28,7 @@ from datetime import datetime
 from platform import system
 import pickle
 import os
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, List, Union
 from collections import OrderedDict
 import time
 
@@ -83,7 +83,7 @@ class Simulator(SimulatorBase):
         # or even a native binary.
         # ==========================================================
 
-        self.prob = ProblemNew(self.build_group(
+        self.prob: ProblemNew = ProblemNew(self.build_group(
             model,
             None,
         ))
@@ -327,7 +327,7 @@ class Simulator(SimulatorBase):
 
         # Store operation types in a dictionary to avoid storing
         # duplicates
-        operation_types = dict()
+        operation_types: Dict[CustomOperation, Component] = dict()
         for node in reversed(model.sorted_nodes):
             # Create Component for Model or Operation added using
             # Model.add
