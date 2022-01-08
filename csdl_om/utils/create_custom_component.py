@@ -1,6 +1,7 @@
 from csdl.utils.parameters import Parameters
 from csdl import CustomOperation, CustomExplicitOperation, CustomImplicitOperation
-from openmdao.api import ExplicitComponent, ImplicitComponent, Component
+from openmdao.api import ExplicitComponent, ImplicitComponent
+from openmdao.core.component import Component
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
 from typing import Dict
