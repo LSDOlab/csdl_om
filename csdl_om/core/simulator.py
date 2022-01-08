@@ -12,7 +12,8 @@ from csdl import (
 )
 import numpy as np
 from csdl_om.core.problem import ProblemNew
-from openmdao.api import Group, IndepVarComp, ImplicitComponent, Component
+from openmdao.api import Group, IndepVarComp, ImplicitComponent
+from openmdao.core.component import Component
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
@@ -33,6 +34,11 @@ from collections import OrderedDict
 import time
 
 
+def _return_format_error(return_format: str):
+    ValueError(
+        "`format` must be 'dict' or 'array', {} given".format(return_format))
+
+
 class Simulator(SimulatorBase):
     REPORT_COMPILE_TIME_FRONT_END = True
 
@@ -48,7 +54,7 @@ class Simulator(SimulatorBase):
         self.implicit_model_types = dict()
         self.iter = 0
         self.data_dir = None
-        self._totals: OrderedDict = OrderedDict()
+        self._totals: Union[OrderedDict, np.ndarray] = OrderedDict()
         self._reporting_time = False
         if not isinstance(model, Model):
             raise TypeError(
@@ -92,7 +98,18 @@ class Simulator(SimulatorBase):
             mode=mode,
         )
 
-    def __getitem__(self, key):
+        self.dv_keys = list(self.prob.model.get_design_vars().keys())
+        self.constraint_keys = list(
+            self.prob.model.get_constraints(recurse=True).keys())
+        objectives = self.prob.model.get_objectives()
+        try:
+            self.obj_key = list(objectives.keys())[0]
+            self.obj_val = self[self.obj_key]
+        except:
+            self.obj_key = None
+            self.obj_val = None
+
+    def __getitem__(self, key) -> np.ndarray:
         return self.prob[key]
 
     def __setitem__(self, key, val):
@@ -479,21 +496,75 @@ class Simulator(SimulatorBase):
     def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
         assert_check_partials(result, atol=atol, rtol=rtol)
 
-    def objective(self) -> Dict[str, Any]:
-        objectives = self.prob.model.get_objectives()
-        try:
-            return list(objectives.values())[0]
-        except:
-            raise ValueError(
-                "Objective not defined for this Simulator."
-                "If defining a feasiblity problem, define an objective with constant value."
-            )
+    # def update_design_variables(
+    #     self,
+    #     vals: np.ndarray,
+    #     return_format='array',
+    # ) -> Union[OrderedDict, np.ndarray]:
+    #     if return_format == 'array':
+    #         d = self.prob.model.get_design_variables()
+    #         for key in self.wrt:
+    #             d[key].flatten()
+    #     if return_format == 'dict':
+    #         return self.prob.model.get_design_variables()
+    #     raise _value_error(return_format)
+    def get_design_variable_metadata(self) -> dict:
+        return self.prob.model.get_design_vars()
 
-    def design_variables(self) -> OrderedDict:
-        return self.prob.model.get_design_variables()
-
-    def constraints(self) -> OrderedDict:
+    def get_constraints_metadata(self) -> OrderedDict:
         return self.prob.model.get_constraints()
+
+    def update_design_variables(
+        self,
+        x: np.ndarray,
+        input_format='array',
+    ):
+        if self.dv_keys is None:
+            raise ValueError("Model does not define any design variables")
+        if input_format == 'array':
+            start_idx = 0
+            dvs = self.prob.model.get_design_vars()
+            for key in self.dv_keys:
+                meta = dvs[key]
+                size = meta['size']
+                shape = self[key].shape
+                self[key] = x[start_idx:size].reshape(shape)
+                start_idx += size
+        if input_format == 'dict':
+            for key in self.dv_keys:
+                self[key] = x[key]
+
+    def design_variables(
+        self,
+        return_format='array',
+    ) -> Union[OrderedDict, np.ndarray]:
+        if self.dv_keys is None:
+            raise ValueError("Model does not define any design variables")
+        if return_format == 'array':
+            return self._concatenate_values(self.dv_keys)
+        if return_format == 'dict':
+            return self.prob.model.get_design_vars()
+        raise _return_format_error(return_format)
+
+    def objective(self) -> float:
+        if self.obj_val is not None:
+            return self.obj_val
+        raise ValueError(
+            "Model does not define an objective"
+            "If defining a feasiblity problem, define an objective with constant value."
+        )
+
+    def constraints(
+        self,
+        return_format='array',
+    ) -> Union[OrderedDict, np.ndarray]:
+        if self.constraint_keys is None:
+            raise ValueError("Model does not define any constraints")
+        if return_format == 'array':
+            return self._concatenate_values(self.constraint_keys)
+        if return_format == 'dict':
+            return self.prob.model.get_constraints()
+        raise _return_format_error(return_format)
 
     # def implicit_outputs(self):
     #     """
@@ -507,31 +578,50 @@ class Simulator(SimulatorBase):
     #     """
     #     raise NotImplementedError(msg)
 
-    def compute_total_derivatives(self) -> OrderedDict:
-        self._totals = self.prob.compute_totals()
+    def compute_total_derivatives(
+        self,
+        return_format='array',
+    ) -> Union[OrderedDict, np.ndarray]:
+        self._totals = self.prob.compute_totals(
+            of=[self.obj_key] + self.constraint_keys,
+            wrt=self.dv_keys,
+            return_format=return_format,
+        )
         return self._totals
 
-    def objective_gradient(self) -> OrderedDict:
-        obj = self.objective()
-        obj_name = list(obj.keys())[0]
-        wrt = list(self.design_variables().keys())
+    def objective_gradient(
+        self,
+        return_format='array',
+    ) -> Union[OrderedDict, np.ndarray]:
+        if return_format == 'array':
+            return self._totals[0, :].flatten()
+        if return_format == 'dict':
+            # TODO: make sure to store how totals were formatted
+            gradient = OrderedDict()
+            for w in self.dv_keys:
+                k = (self.obj_key, w)
+                gradient[k] = self._totals[k]
+            return gradient
+        _return_format_error(return_format)
 
-        gradient = OrderedDict()
-        for w in wrt:
-            k = (obj_name, w)
-            gradient[k] = self._totals[k]
-        return gradient
-
-    def constraint_jacobian(self) -> OrderedDict:
-        obj = self.objective()
-        obj_name = list(obj.keys())[0]
-
-        # TODO: will need to modify for SURF
-        jacobian = OrderedDict()
-        for (of, wrt), v in self._totals.items():
-            if of != obj_name:
-                jacobian[of, wrt] = v
-        return jacobian
+    def constraint_jacobian(
+        self,
+        return_format='array',
+    ) -> Union[OrderedDict, np.ndarray]:
+        if return_format == 'array':
+            if not isinstance(self._totals, np.ndarray):
+                TypeError("Total derivatives are not stored in array format")
+            return self._totals[1:, :]
+        if return_format == 'dict':
+            if not isinstance(self._totals, dict):
+                TypeError("Total derivatives are not stored in array format")
+            # TODO: will need to modify for SURF
+            jacobian = OrderedDict()
+            for (of, wrt), v in self._totals.items():
+                if of != self.obj_key:
+                    jacobian[of, wrt] = v
+            return jacobian
+        _return_format_error(return_format)
 
     def add_recorder(self, recorder):
         self.prob.setup_save_data(recorder)
@@ -542,3 +632,12 @@ class Simulator(SimulatorBase):
     #     residuals with respect to design variables
     #     """
     #     raise NotImplementedError(msg)
+    def _concatenate_values(
+        self,
+        keys: List[str],
+    ) -> np.ndarray:
+        # TODO: do this faster
+        c = []
+        for key in keys:
+            c.append(self[key].flatten())
+        return np.array(c).flatten()
