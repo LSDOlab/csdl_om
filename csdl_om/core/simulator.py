@@ -528,7 +528,7 @@ class Simulator(SimulatorBase):
                 meta = dvs[key]
                 size = meta['size']
                 shape = self[key].shape
-                self[key] = x[start_idx:size].reshape(shape)
+                self[key] = x[start_idx:start_idx + size].reshape(shape)
                 start_idx += size
         if input_format == 'dict':
             for key in self.dv_keys:
@@ -548,7 +548,7 @@ class Simulator(SimulatorBase):
 
     def objective(self) -> float:
         if self.obj_val is not None:
-            return self.obj_val
+            return self[self.obj_key][0]
         raise ValueError(
             "Model does not define an objective"
             "If defining a feasiblity problem, define an objective with constant value."
@@ -640,4 +640,4 @@ class Simulator(SimulatorBase):
         c = []
         for key in keys:
             c.append(self[key].flatten())
-        return np.array(c).flatten()
+        return np.concatenate(c).flatten()
