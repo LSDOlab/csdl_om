@@ -98,6 +98,10 @@ class Simulator(SimulatorBase):
             mode=mode,
         )
 
+        self._initialize_keys()
+
+    def _initialize_keys(self):
+
         self.dv_keys = list(self.prob.model.get_design_vars().keys())
         self.constraint_keys = list(
             self.prob.model.get_constraints(recurse=True).keys())
@@ -640,4 +644,8 @@ class Simulator(SimulatorBase):
         c = []
         for key in keys:
             c.append(self[key].flatten())
-        return np.concatenate(c).flatten()
+
+        if len(c) == 0:
+            return np.array([])
+        else:
+            return np.concatenate(c).flatten()
