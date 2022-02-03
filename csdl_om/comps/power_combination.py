@@ -68,10 +68,10 @@ class PowerCombination(ArrayExplicitComponent):
 
         outputs[out_name] = coeff
         for in_name, power in zip(in_names, powers):
-            if np.any(inputs[in_name] == 0) and power < 0:
-                print(in_name)
-                print(inputs[in_name])
-                exit()
+            # if np.any(inputs[in_name] == 0) and power < 0:
+                # print(in_name)
+                # print(inputs[in_name])
+                # exit()
             outputs[out_name] *= inputs[in_name]**power
 
     def compute_partials(self, inputs, partials):

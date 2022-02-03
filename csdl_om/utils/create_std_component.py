@@ -69,6 +69,8 @@ from csdl.operations.sum import sum
 from csdl.operations.average import average
 from csdl.operations.min import min
 from csdl.operations.max import max
+from csdl.operations.quatrotvec import quatrotvec
+
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -105,6 +107,7 @@ from csdl_om.comps.axiswise_min_comp import AxisMinComp
 from csdl_om.comps.elementwise_min_comp import ElementwiseMinComp
 from csdl_om.comps.axiswise_max_comp import AxisMaxComp
 from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
+from csdl_om.comps.quatrotveccomp import QuatRotVecComp
 
 import numpy as np
 
@@ -647,6 +650,16 @@ op_comp_map[opclass] = lambda op: AxisMaxComp(
         val=op.dependencies[0].val,
     ) if len(op.dependencies) == 1 and op.literals['axis'] == None else None))
 
+opclass = quatrotvec
+op_comp_map[opclass] = lambda op: QuatRotVecComp(
+	shape=op.dependencies[1].shape,
+    quat_name = op.dependencies[0].name,
+    vec_name = op.dependencies[1].name,
+    quat_vals = op.dependencies[0].val,
+    vec_vals=  op.dependencies[1].val,
+    out_name= op.outs[0].name,
+
+)
 
 def create_std_component(op: StandardOperation):
     opclass = type(op)
