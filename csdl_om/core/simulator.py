@@ -114,6 +114,8 @@ class Simulator(SimulatorBase):
             self.obj_val = None
 
     def __getitem__(self, key) -> np.ndarray:
+        if self.iter < 1:
+            warn("Simulation has not been run. Printing default values.")
         return self.prob[key]
 
     def __setitem__(self, key, val):
