@@ -115,7 +115,7 @@ class Simulator(SimulatorBase):
 
     def __getitem__(self, key) -> np.ndarray:
         if self.iter < 1:
-            warn("Simulation has not been run. Printing default values.")
+            warn("Simulation has not been run. Reading default value.")
         return self.prob[key]
 
     def __setitem__(self, key, val):
