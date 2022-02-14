@@ -8,7 +8,8 @@ def new_solve_nonlinear(self):
 
     data_dict = {}
     for var_name in self._outputs:
-        data_dict[var_name] = self._outputs[var_name]
+        prom = self._var_abs2prom['output'][var_name]
+        data_dict[prom] = self._var_allprocs_prom2abs_list['output'][prom]
 
     self.recorder(data_dict, 'simulator')
 
