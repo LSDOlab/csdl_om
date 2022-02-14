@@ -111,10 +111,11 @@ from csdl_om.comps.quatrotveccomp import QuatRotVecComp
 
 import numpy as np
 
-from typing import Dict
+from typing import Dict, Callable
 from openmdao.api import ExplicitComponent
 
-op_comp_map: Dict[StandardOperation, ExplicitComponent] = dict()
+op_comp_map: Dict[StandardOperation, Callable[[StandardOperation],
+                                              ExplicitComponent], ] = dict()
 
 # Basic Elementwise Operations
 opclass = linear_combination
@@ -545,19 +546,7 @@ op_comp_map[opclass] = lambda op: ReorderAxesComp(
 )
 
 opclass = sum
-op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
-    in_name=op.dependencies[0].name,
-    shape=op.dependencies[0].shape,
-    out_name=op.outs[0].name,
-    val=op.dependencies[0].val,
-    out_shape=op.outs[0].shape,
-) if len(op.dependencies) == 1 else MultipleTensorSumComp(
-    in_names=[var.name for var in op.dependencies],
-    shape=op.dependencies[0].shape,
-    out_name=op.outs[0].name,
-    vals=[var.val for var in op.dependencies],
-    out_shape=op.outs[0].shape,
-)) if op.literals['axes'] is None else (SingleTensorSumComp(
+op_comp_map[opclass] = lambda op: SingleTensorSumComp(
     in_name=op.dependencies[0].name,
     shape=op.dependencies[0].shape,
     out_name=op.outs[0].name,
@@ -571,7 +560,7 @@ op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
     out_shape=op.outs[0].shape,
     axes=op.literals['axes'],
     vals=[var.val for var in op.dependencies],
-))
+)
 
 opclass = average
 op_comp_map[opclass] = lambda op: (SingleTensorAverageComp(
@@ -652,14 +641,14 @@ op_comp_map[opclass] = lambda op: AxisMaxComp(
 
 opclass = quatrotvec
 op_comp_map[opclass] = lambda op: QuatRotVecComp(
-	shape=op.dependencies[1].shape,
-    quat_name = op.dependencies[0].name,
-    vec_name = op.dependencies[1].name,
-    quat_vals = op.dependencies[0].val,
-    vec_vals=  op.dependencies[1].val,
-    out_name= op.outs[0].name,
-
+    shape=op.dependencies[1].shape,
+    quat_name=op.dependencies[0].name,
+    vec_name=op.dependencies[1].name,
+    quat_vals=op.dependencies[0].val,
+    vec_vals=op.dependencies[1].val,
+    out_name=op.outs[0].name,
 )
+
 
 def create_std_component(op: StandardOperation):
     opclass = type(op)
