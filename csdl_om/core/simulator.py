@@ -394,25 +394,30 @@ class Simulator(SimulatorBase):
                     group.add_subsystem(
                         name,
                         sys,
-                        promotes=[],
+                        promotes=['*'],
+                        # promotes=[],
                     )
-                    for outer, inner in zip(
-                        [x.name for x in node.dependencies],
-                            node.input_meta.keys(),
-                    ):
-                        group.connect(outer, '{}.{}'.format(name, inner))
-                    if len(
-                            list(
-                                filter(lambda x: len(x.dependents) > 0,
-                                       node.dependents))) > 0:
-                        # if registered output has no dependent
-                        # operations, then OpenMDAO will not be able to
-                        # form a connection between components
-                        for inner, outer in zip(
-                                node.output_meta.keys(),
-                            [x.name for x in node.dependents],
-                        ):
-                            group.connect('{}.{}'.format(name, inner), outer)
+                    # for outer, inner in zip(
+                    #     [x.name for x in node.dependencies],
+                    #         node.input_meta.keys(),
+                    # ):
+                    #     group.connect(outer, '{}.{}'.format(name,
+                    #     inner))
+                    # TODO: if registered output has no dependents, OM
+                    # will not be able to form a connection in parent
+                    # models
+                    # if len(
+                    #         list(
+                    #             filter(lambda x: len(x.dependents) > 0,
+                    #                    node.dependents))) > 0:
+                    #     # if registered output has no dependent
+                    #     # operations, then OpenMDAO will not be able to
+                    #     # form a connection between components
+                    #     for inner, outer in zip(
+                    #             node.output_meta.keys(),
+                    #         [x.name for x in node.dependents],
+                    #     ):
+                    #         group.connect('{}.{}'.format(name, inner), outer)
                 elif isinstance(node,
                                 (ImplicitOperation, BracketedSearchOperation)):
                     name = type(
