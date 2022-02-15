@@ -29,9 +29,10 @@ from datetime import datetime
 from platform import system
 import pickle
 import os
-from typing import Dict, Any, List, Union
+from typing import Dict, List, Union
 from collections import OrderedDict
 import time
+from warnings import warn
 
 
 def _return_format_error(return_format: str):
@@ -306,15 +307,13 @@ class Simulator(SimulatorBase):
         objective from parent model
         """
 
-        # If model has objective and parent model also has
-        # objective, then there are multiple objectives; error
-        if model.objective is not None and objective is not None:
-            raise ValueError("Cannot define more than one objective")
-
         # If parent model does not have objective, get objective from
-        # current model; may be None
-        if objective is None:
-            objective = model.objective
+        # current model; only one objective allowed in model hierarchy
+        if model.objective is not None:
+            if objective is None:
+                objective = model.objective
+            else:
+                raise ValueError("Cannot define more than one objective")
 
         # Build system from IR
         group = Group()
@@ -355,7 +354,6 @@ class Simulator(SimulatorBase):
             # Create Component for Model or Operation added using
             # Model.add
             if isinstance(node, Subgraph):
-                promotes = node.promotes
                 if isinstance(node.submodel, Model):
                     name = name = type(
                         node).__name__ + '_model' + node.name if node.name[
@@ -392,21 +390,29 @@ class Simulator(SimulatorBase):
                         ).__name__ + '_custom_op' + node.name if node.name[
                             0] == '_' else node.name
                     sys = create_custom_component(operation_types, node)
-                    # TODO: don't promote, issue connections
+                    # don't promote, issue connections
                     group.add_subsystem(
                         name,
                         sys,
-                        promotes=['*'],
+                        promotes=[],
                     )
-                    # group.add_subsystem(
-                    #     name,
-                    #     sys,
-                    #     promotes=[],
-                    # )
-                    # for dep in zip(node.dependencies, node.input_meta.keys()):
-                    #     group.connect(dep.name, name +'.'+ key)
-                    #     # TODO: need to connect the outputs to
-                    #     # subsequent components...
+                    for outer, inner in zip(
+                        [x.name for x in node.dependencies],
+                            node.input_meta.keys(),
+                    ):
+                        group.connect(outer, '{}.{}'.format(name, inner))
+                    if len(
+                            list(
+                                filter(lambda x: len(x.dependents) > 0,
+                                       node.dependents))) > 0:
+                        # if registered output has no dependent
+                        # operations, then OpenMDAO will not be able to
+                        # form a connection between components
+                        for inner, outer in zip(
+                                node.output_meta.keys(),
+                            [x.name for x in node.dependents],
+                        ):
+                            group.connect('{}.{}'.format(name, inner), outer)
                 elif isinstance(node,
                                 (ImplicitOperation, BracketedSearchOperation)):
                     name = type(
@@ -452,15 +458,15 @@ class Simulator(SimulatorBase):
         # if current model has objective, add objective
         if model.objective is not None:
             group.add_objective(
-                objective['name'],
-                ref=objective['ref'],
-                ref0=objective['ref0'],
-                index=objective['index'],
-                units=objective['units'],
-                adder=objective['adder'],
-                scaler=objective['scaler'],
-                parallel_deriv_color=objective['parallel_deriv_color'],
-                cache_linear_solution=objective['cache_linear_solution'],
+                model.objective['name'],
+                ref=model.objective['ref'],
+                ref0=model.objective['ref0'],
+                index=model.objective['index'],
+                units=model.objective['units'],
+                adder=model.objective['adder'],
+                scaler=model.objective['scaler'],
+                parallel_deriv_color=model.objective['parallel_deriv_color'],
+                cache_linear_solution=model.objective['cache_linear_solution'],
             )
 
         for name, meta in model.constraints.items():
@@ -556,7 +562,7 @@ class Simulator(SimulatorBase):
         if self.obj_val is not None:
             return self[self.obj_key][0]
         raise ValueError(
-            "Model does not define an objective"
+            "Model does not define an objective\n"
             "If defining a feasiblity problem, define an objective with constant value."
         )
 
