@@ -70,6 +70,8 @@ from csdl.operations.average import average
 from csdl.operations.min import min
 from csdl.operations.max import max
 from csdl.operations.quatrotvec import quatrotvec
+from csdl.operations.sparsematmat import sparsematmat
+
 
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
@@ -108,6 +110,8 @@ from csdl_om.comps.elementwise_min_comp import ElementwiseMinComp
 from csdl_om.comps.axiswise_max_comp import AxisMaxComp
 from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
 from csdl_om.comps.quatrotveccomp import QuatRotVecComp
+from csdl_om.comps.sparsemat_mat_comp import SparseMatMatComp
+
 
 import numpy as np
 
@@ -658,6 +662,16 @@ op_comp_map[opclass] = lambda op: QuatRotVecComp(
     quat_vals = op.dependencies[0].val,
     vec_vals=  op.dependencies[1].val,
     out_name= op.outs[0].name,
+
+)
+
+opclass = sparsematmat
+op_comp_map[opclass] = lambda op: SparseMatMatComp(
+	shape=op.dependencies[0].shape,
+    in_name= op.dependencies[0].name,
+    out_name= op.outs[0].name,
+    val=op.dependencies[0].val,
+    sparse_mat = op.literals['sparse_mat']
 
 )
 
