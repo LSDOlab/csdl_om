@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Set
 from csdl import ImplicitOperation, BracketedSearchOperation
 from csdl import Output
 from csdl.core.variable import Variable
@@ -33,10 +33,10 @@ def create_implicit_component(
     for in_vars in out_in_map.values():
         input_names.extend([inp.name for inp in in_vars])
     input_names = list(set(input_names))
-    residual_names = list(res_out_map.keys())
+    residual_names: List[str] = list(res_out_map.keys())
     state_names = list(out_in_map.keys())
-    expose_set = set(expose)
-    intermediate_outputs = list(
+    expose_set: Set[str] = set(expose)
+    intermediate_outputs: List[Output] = list(
         filter(lambda x: x.name in expose_set,
                implicit_operation._model.registered_outputs))
 
@@ -171,7 +171,8 @@ def create_implicit_component(
 
         prob = comp.sim.prob
         internal_model_jacobian = prob.compute_totals(
-            of=residual_names,
+            of=residual_names + list(expose_set),
+            # of=residual_names,
             wrt=input_names + state_names,
         )
 
@@ -199,7 +200,7 @@ def create_implicit_component(
                              input_name] = -internal_model_jacobian[
                                  residual_name, input_name]
 
-            # implicit output wrt corresponding residual
+            # residual wrt corresponding implicit output
             jacobian[state_name,
                      state_name] = internal_model_jacobian[residual_name,
                                                            state_name]
@@ -256,6 +257,39 @@ def create_implicit_component(
     elif isinstance(implicit_operation, BracketedSearchOperation):
         brackets_map = implicit_operation.brackets
         maxiter = implicit_operation.maxiter
+
+        def linearize(comp, inputs, outputs, jacobian):
+            comp._set_values(inputs, outputs)
+
+            prob = comp.sim.prob
+            internal_model_jacobian = prob.compute_totals(
+                of=residual_names + list(expose_set),
+                # of=residual_names,
+                wrt=input_names + state_names,
+            )
+
+            for residual in residuals:
+                residual_name = residual.name
+                state_name = res_out_map[residual_name].name
+
+                # implicit output wrt inputs
+                for input_name in [i.name for i in out_in_map[state_name]]:
+                    if input_name is not state_name:
+                        if state_name in expose_set:
+                            # compute derivative for residual associated
+                            # with exposed wrt argument
+                            jacobian[state_name,
+                                     input_name] = -internal_model_jacobian[
+                                         residual_name, input_name]
+                    jacobian[state_name, input_name] = 0
+
+                # residual wrt corresponding implicit output
+                jacobian[state_name, state_name] = 0
+
+                comp.derivs[state_name] = np.diag(
+                    internal_model_jacobian[residual_name,
+                                            state_name]).reshape(
+                                                residual.shape)
 
         def _run_internal_model(
             comp,
