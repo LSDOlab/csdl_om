@@ -1,10 +1,11 @@
 import numpy as np
 from openmdao.api import ExplicitComponent
 
-from csdl.core.variable import Variable
+from csdl.lang.variable import Variable
 
 
 class DecomposeComp(ExplicitComponent):
+
     def initialize(self):
         self.options.declare('in_name', types=str)
         self.options.declare('expr', types=Variable)

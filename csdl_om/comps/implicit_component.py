@@ -4,12 +4,12 @@ import numpy as np
 from openmdao.api import Problem
 from openmdao.api import ImplicitComponent as OMImplicitComponent
 
-from csdl.core.subgraph import Subgraph
-from csdl.core.variable import Variable
-from csdl.core.explicit_output import ExplicitOutput
-from csdl.core.implicit_output import ImplicitOutput
-from csdl.core.model import Model
-from csdl.core.input import Input
+from csdl.lang.subgraph import Subgraph
+from csdl.lang.variable import Variable
+from csdl.lang.concatenation import Concatenation
+from csdl.lang.implicit_output import ImplicitOutput
+from csdl.lang.model import Model
+from csdl.lang.input import Input
 from csdl.utils.collect_input_exprs import collect_input_exprs
 
 
@@ -34,6 +34,7 @@ def _remove_nonresiduals(registered_outputs: List[Variable]):
 # TODO: disallow independent variables
 # TODO: disallow implicit variables in main model class
 def _post_setup(func: Callable) -> Callable:
+
     def _build_problem(self):
         func(self)
         # setup internal problem
@@ -45,7 +46,7 @@ def _post_setup(func: Callable) -> Callable:
         # and outputs
         for res_expr in m.registered_outputs:
             if isinstance(res_expr, Subgraph) == False and isinstance(
-                    res_expr, ExplicitOutput) == False:
+                    res_expr, Concatenation) == False:
                 # inputs for this residual only
                 in_exprs = set(collect_input_exprs([], res_expr, res_expr))
                 # output corresponding to this residual
@@ -102,7 +103,7 @@ def _post_setup(func: Callable) -> Callable:
         # set initial values for inputs and output
         for res_expr in self.model.registered_outputs:
             if isinstance(res_expr, Subgraph) == False and isinstance(
-                    res_expr, ExplicitOutput) == False:
+                    res_expr, Concatenation) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 if len(self.model.out_vals) == 0:
                     self.prob[out_name] = 1
@@ -123,6 +124,7 @@ def _post_setup(func: Callable) -> Callable:
 
 
 class _ProblemBuilder(type):
+
     def __new__(cls, name, bases, attr):
         attr['setup'] = _post_setup(attr['setup'])
         return super(_ProblemBuilder, cls).__new__(cls, name, bases, attr)
@@ -143,6 +145,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
         Object that represents an expression to compute the residual
 
     """
+
     def __init__(self, maxiter=100, n2=False, **kwargs):
         super().__init__(**kwargs)
         self._inst_functs = {
@@ -163,7 +166,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
     def _set_values(self, inputs, outputs):
         for res_expr in self.model.registered_outputs:
             if isinstance(res_expr, Subgraph) == False and isinstance(
-                    res_expr, ExplicitOutput) == False:
+                    res_expr, Concatenation) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 self.prob[out_name] = outputs[out_name]
                 for in_expr in self.all_inputs[out_name]:
@@ -196,7 +199,7 @@ class ImplicitComponent(OMImplicitComponent, metaclass=_ProblemBuilder):
     def solve_nonlinear(self, inputs, outputs):
         for res_expr in self.model.registered_outputs:
             if isinstance(res_expr, Subgraph) == False and isinstance(
-                    res_expr, ExplicitOutput) == False:
+                    res_expr, Concatenation) == False:
                 out_name = self.model.res_out_map[res_expr.name]
                 shape = res_expr.shape
 

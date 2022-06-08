@@ -1,13 +1,77 @@
 from csdl.utils.parameters import Parameters
 from csdl import CustomOperation, CustomExplicitOperation, CustomImplicitOperation
 from openmdao.api import ExplicitComponent, ImplicitComponent
+from openmdao.core.component import Component
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
+from typing import Dict
+# csdl-provided methods to be called by OpenMDAO; user is not allowed to
+# define these methods
+prohibited_methods = {
+    '_csdl_initialize',
+    '_csdl_add_input',
+    '_csdl_add_output',
+    '_csdl_declare_partials',
+}
+# names of methods in CustomExplicitOperation that are not special methods
+custom_explicit_methods = set([
+    attribute for attribute in dir(CustomExplicitOperation)
+    if callable(getattr(CustomExplicitOperation, attribute))
+    and attribute.startswith('__') is False
+])
+# names of methods in CustomImplicitOperation that are not special methods
+custom_implicit_methods = set([
+    attribute for attribute in dir(CustomImplicitOperation)
+    if callable(getattr(CustomImplicitOperation, attribute))
+    and attribute.startswith('__') is False
+])
+# names of methods in CustomOperation that are user defined
+user_custom_methods = {
+    'initialize',
+    'define',
+    'add_input',
+    'add_output',
+    'declare_derivatives',
+    # These have the same name, but different type signatures and
+    # implementations in CustomExplicitOperation and
+    # CustomImplicitOperation
+    'compute_derivatives',
+    'compute_jacvec_product',
+}
+# names of methods in CustomExplicitOperation that are user defined
+user_explicit_methods = {
+    'compute',
+}
+# names of methods in CustomImplicitOperation that are user defined
+user_implicit_methods = {
+    'evaluate_residuals',
+    'solve_residual_equations',
+    'apply_inverse_jacobian',
+}
+# names of methods in ExplicitComponent that are not special methods
+om_explicit_methods = set([
+    attribute for attribute in dir(ExplicitComponent)
+    if callable(getattr(ExplicitComponent, attribute))
+    and attribute.startswith('__') is False
+])
+# names of methods in ImplicitComponent that are not special methods
+om_implicit_methods = set([
+    attribute for attribute in dir(ImplicitComponent)
+    if callable(getattr(ImplicitComponent, attribute))
+    and attribute.startswith('__') is False
+])
 
 
-def create_custom_component(operation_types, op: CustomOperation):
-    t = type(op)
+def create_custom_component(operation_types: Dict[CustomOperation, Component],
+                            op: CustomOperation):
+    t = op
+    if len(list(filter(lambda x: hasattr(op, x), prohibited_methods))) > 0:
+        raise NameError(
+            'In {} named {}, user has defined methods with forbidden names. The following method names are not allowed in CustomOperation subclasses: {}'
+            .format(type(op),
+                    type(op).__name__, prohibited_methods))
     # Create new component class if necessary
+    # FIXME: keep track of instances, not types
     if t not in operation_types.keys():
         # NOTE: op.initialize ran when op was constructed in CSDL (front
         # end); op.parameters defined at this stage
@@ -19,9 +83,6 @@ def create_custom_component(operation_types, op: CustomOperation):
             # Component.initialize runs
             for k, v in self.options._dict.items():
                 self.parameters._dict[k] = v
-
-            # run user-defined CustomOperation.define method
-            self._csdl_define()
 
             # assign solver to implicit component
             if isinstance(self, ImplicitComponent):
@@ -86,9 +147,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                 # Component.initialize
                 self._declare_options()
 
-                # user-defined initialize
-                self._csdl_initialize()
-
                 # declare OpenMDAO options
                 for k, v in self.parameters._dict.items():
                     self.options.declare(
@@ -107,6 +165,21 @@ def create_custom_component(operation_types, op: CustomOperation):
                 component_class_name = 'CustomExplicitComponent' + str(
                     op._count)
 
+                methods = set([
+                    attribute for attribute in dir(type(op))
+                    if callable(getattr(type(op), attribute))
+                    and attribute.startswith('__') is False
+                ])
+
+                for method in methods:
+                    if method in user_custom_methods.union(
+                            user_explicit_methods):
+                        pass
+                    elif method in om_explicit_methods:
+                        raise NameError(
+                            'In ImplicitOperation {}, method {} shares a name with a method used by OpenMDAO'
+                            .format(type(op).__name__, method))
+
                 u = type(
                     component_class_name,
                     (ExplicitComponent, ),
@@ -115,7 +188,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                         # equivalent type/signature in OpenMDAO
                         parameters=op.parameters,
                         _csdl_initialize=op.initialize,
-                        _csdl_define=op.define,
                         # user defined methods that do have
                         # equivalent signature in OpenMDAO
                         initialize=initialize,
@@ -130,6 +202,10 @@ def create_custom_component(operation_types, op: CustomOperation):
                     ),
                 )
 
+                for method in methods:
+                    if method not in custom_explicit_methods:
+                        setattr(u, method, getattr(op, method))
+
                 operation_types[t] = u
             else:
                 component_class_name = 'CustomImplicitComponent' + str(
@@ -142,7 +218,6 @@ def create_custom_component(operation_types, op: CustomOperation):
                         # equivalent type/signature in OpenMDAO
                         parameters=op.parameters,
                         _csdl_initialize=op.initialize,
-                        _csdl_define=op.define,
                         # user defined methods that do have
                         # equivalent signature in OpenMDAO
                         initialize=initialize,

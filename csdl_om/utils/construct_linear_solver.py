@@ -17,6 +17,10 @@ from openmdao.solvers.linear.scipy_iter_solver import ScipyKrylov as OMScipyKryl
 
 
 def construct_linear_solver(solver):
+    # NOTE: CSDL makes sure that we always have a linear solver when
+    # it's required
+    if solver is None:
+        return None
     if not isinstance(solver, LinearSolver):
         raise TypeError("")
     # initialize OpenMDAO solver

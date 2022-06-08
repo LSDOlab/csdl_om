@@ -1,24 +1,26 @@
 import numpy as np
 from openmdao.api import ExplicitComponent
 
-from csdl.core.variable import Variable
-
 
 class IndexedPassThrough(ExplicitComponent):
+
     def initialize(self):
         self.options.declare('out_name', types=str)
         self.options.declare('out_shape', types=tuple)
         self.options.declare('indices', types=dict)
         self.options.declare('vals', types=dict)
+        self.options.declare('out_val', types=np.ndarray)
 
     def setup(self):
         out_name = self.options['out_name']
         out_shape = self.options['out_shape']
         indices = self.options['indices']
         vals = self.options['vals']
+        out_val = self.options['out_val']
         self.add_output(
             out_name,
             shape=out_shape,
+            val=out_val,
             # units=out_expr.units,
         )
 

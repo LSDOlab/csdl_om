@@ -3,6 +3,7 @@ import numpy as np
 
 
 class ElementwiseCS(ExplicitComponent):
+
     def initialize(self):
         self.options.declare('in_names', types=list)
         self.options.declare('out_name', types=str)
@@ -34,7 +35,6 @@ class ElementwiseCS(ExplicitComponent):
             exec('{}=inputs[\'{}\']'.format(in_name, in_name))
 
         # compute function
-        print(compute_string)
         exec(compute_string)
         outputs[out_name] = eval(out_name)
 

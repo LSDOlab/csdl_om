@@ -69,6 +69,10 @@ from csdl.operations.sum import sum
 from csdl.operations.average import average
 from csdl.operations.min import min
 from csdl.operations.max import max
+from csdl.operations.quatrotvec import quatrotvec
+from csdl.operations.sparsematmat import sparsematmat
+
+
 from csdl_om.comps.linear_combination import LinearCombination
 from csdl_om.comps.power_combination import PowerCombination
 from csdl_om.comps.pass_through import PassThrough
@@ -105,10 +109,17 @@ from csdl_om.comps.axiswise_min_comp import AxisMinComp
 from csdl_om.comps.elementwise_min_comp import ElementwiseMinComp
 from csdl_om.comps.axiswise_max_comp import AxisMaxComp
 from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
+from csdl_om.comps.quatrotveccomp import QuatRotVecComp
+from csdl_om.comps.sparsemat_mat_comp import SparseMatMatComp
+
 
 import numpy as np
 
-op_comp_map = dict()
+from typing import Dict, Callable
+from openmdao.api import ExplicitComponent
+
+op_comp_map: Dict[StandardOperation, Callable[[StandardOperation],
+                                              ExplicitComponent], ] = dict()
 
 # Basic Elementwise Operations
 opclass = linear_combination
@@ -153,6 +164,7 @@ op_comp_map[opclass] = lambda op: IndexedPassThrough(
     out_shape=op.outs[0].shape,
     indices=op.outs[0]._tgt_indices,
     vals=op.outs[0]._tgt_vals,
+    out_val=op.outs[0].val,  # default value for entire contatenation
 )
 
 opclass = decompose
@@ -538,17 +550,7 @@ op_comp_map[opclass] = lambda op: ReorderAxesComp(
 )
 
 opclass = sum
-op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
-    in_name=op.dependencies[0].name,
-    shape=op.outs[0].shape,
-    out_name=op.outs[0].name,
-    val=op.dependencies[0].val,
-) if len(op.dependencies) == 1 else MultipleTensorSumComp(
-    in_names=[var.name for var in op.dependencies],
-    shape=op.outs[0].shape,
-    out_name=op.outs[0].name,
-    vals=[var.val for var in op.dependencies],
-)) if op.literals['axes'] is None else (SingleTensorSumComp(
+op_comp_map[opclass] = lambda op: SingleTensorSumComp(
     in_name=op.dependencies[0].name,
     shape=op.dependencies[0].shape,
     out_name=op.outs[0].name,
@@ -562,7 +564,7 @@ op_comp_map[opclass] = lambda op: (SingleTensorSumComp(
     out_shape=op.outs[0].shape,
     axes=op.literals['axes'],
     vals=[var.val for var in op.dependencies],
-))
+)
 
 opclass = average
 op_comp_map[opclass] = lambda op: (SingleTensorAverageComp(
@@ -641,6 +643,25 @@ op_comp_map[opclass] = lambda op: AxisMaxComp(
         val=op.dependencies[0].val,
     ) if len(op.dependencies) == 1 and op.literals['axis'] == None else None))
 
+opclass = quatrotvec
+op_comp_map[opclass] = lambda op: QuatRotVecComp(
+    shape=op.dependencies[1].shape,
+    quat_name=op.dependencies[0].name,
+    vec_name=op.dependencies[1].name,
+    quat_vals=op.dependencies[0].val,
+    vec_vals=op.dependencies[1].val,
+    out_name=op.outs[0].name,
+)
+
+opclass = sparsematmat
+op_comp_map[opclass] = lambda op: SparseMatMatComp(
+	shape=op.dependencies[0].shape,
+    in_name= op.dependencies[0].name,
+    out_name= op.outs[0].name,
+    val=op.dependencies[0].val,
+    sparse_mat = op.literals['sparse_mat']
+
+)
 
 def create_std_component(op: StandardOperation):
     opclass = type(op)

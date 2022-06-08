@@ -26,6 +26,7 @@ class SparsePartialEinsumComp(ExplicitComponent):
     out_name: str
         Output component name that represents the output array calculated based on the Einstein summation operation given.
     """
+
     def initialize(self):
         self.options.declare('in_names',
                              default=None,
@@ -378,10 +379,10 @@ class SparsePartialEinsumComp(ExplicitComponent):
 
             # Partials are dense if surviving_axes_map is empty for at least one location
             if sparse_partial:
-                partial_indices_list = self.partial_indices_list[
-                    len(completed_in_names) - 1]
+                partial_indices = tuple(
+                    self.partial_indices_list[len(completed_in_names) - 1])
 
-                partials[out_name, in_name] = partial[partial_indices_list]
+                partials[out_name, in_name] = partial[partial_indices]
 
             else:
                 partials[out_name, in_name] = partial
