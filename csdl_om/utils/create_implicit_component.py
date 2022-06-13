@@ -1,13 +1,34 @@
-from typing import Dict, List, Union, Set
+from typing import Dict, List, Union, Set, Tuple
 from csdl import ImplicitOperation, BracketedSearchOperation
 from csdl import Output
 from csdl.core.variable import Variable
+from csdl.core.declared_variable import DeclaredVariable
 from networkx.algorithms.core import k_core
 from openmdao.api import ImplicitComponent
 import numpy as np
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
+
+def add_input(comp, in_name,in_var):
+    try:
+        comp.add_input(
+            in_name,
+            val=in_var.val,
+            shape=in_var.shape,
+            src_indices=in_var.src_indices,
+            flat_src_indices=in_var.flat_src_indices,
+            units=in_var.units,
+            desc=in_var.desc,
+            tags=in_var.tags,
+            shape_by_conn=in_var.shape_by_conn,
+            copy_shape=in_var.copy_shape,
+        )
+
+        # set values
+        comp.sim[in_name] = in_var.val
+    except:
+        pass
 
 
 def create_implicit_component(
@@ -19,8 +40,8 @@ def create_implicit_component(
 
     # get info from implicit_operation
     out_res_map: Dict[str, Output] = implicit_operation.out_res_map
-    out_in_map: Dict[str, Variable] = implicit_operation.out_in_map
-    res_out_map: Dict[str, Variable] = implicit_operation.res_out_map
+    out_in_map: Dict[str, list[DeclaredVariable]] = implicit_operation.out_in_map
+    res_out_map: Dict[str, DeclaredVariable] = implicit_operation.res_out_map
     expose: List[str] = implicit_operation.expose
     for name in expose:
         if '.' in name:
@@ -57,10 +78,30 @@ def create_implicit_component(
             intermediate_name = intermediate.name
             comp.sim[intermediate_name] = outputs[intermediate_name]
 
+    # allow setting brackets using variables
+    bracket_lower_vars: Dict[str, str] = dict()
+    bracket_upper_vars: Dict[str, str] = dict()
+    if isinstance(implicit_operation, BracketedSearchOperation):
+        for k, (a,b) in implicit_operation.brackets:
+            if isinstance(a, Variable):
+                bracket_lower_vars[k]=a.name
+            if isinstance(b, Variable):
+                bracket_upper_vars[k]=b.name
+
+
     # Define the setup method for the component class
     def setup(comp):
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
+
+        for k, v in bracket_lower_vars: 
+            if isinstance(v, Variable):
+                add_input(comp, k,v)
+        for k, v in bracket_upper_vars: 
+            if isinstance(v, Variable):
+                add_input(comp, k,v)
+
+
 
         for out in implicit_operation.outs:
             # STATES
@@ -113,35 +154,18 @@ def create_implicit_component(
                     if in_name not in out_in_map.keys():
                         # use try/except because multiple outputs can
                         # depend on the same input
-                        try:
-                            comp.add_input(
-                                in_name,
-                                val=in_var.val,
-                                shape=in_var.shape,
-                                src_indices=in_var.src_indices,
-                                flat_src_indices=in_var.flat_src_indices,
-                                units=in_var.units,
-                                desc=in_var.desc,
-                                tags=in_var.tags,
-                                shape_by_conn=in_var.shape_by_conn,
-                                copy_shape=in_var.copy_shape,
-                            )
-
-                            # set values
-                            comp.sim[in_name] = in_var.val
-                        except:
-                            pass
+                        add_input(comp, in_name, in_var.val)
 
         for out in implicit_operation.outs:
             if out.name in out_in_map.keys():
                 # need to check if keys exist because exposed variables
                 # that residuals depend on will not be in out_in_map?
-                in_vars = out_in_map[out.name]
                 comp.declare_partials(
                     of=out.name,
                     wrt=out.name,
                 )
-                for in_var in in_vars:
+                in_vars = out_in_map[out.name]
+                for in_var in list(filter(lambda x: x not in bracket_lower_vars.keys() and x not in bracket_upper_vars.keys(), in_vars)):
                     if in_var in expose_set or in_var.name in out_in_map.keys(
                     ):
                         comp.declare_partials(
@@ -255,7 +279,14 @@ def create_implicit_component(
         implicit_component = component_class()
         return implicit_component
     elif isinstance(implicit_operation, BracketedSearchOperation):
-        brackets_map = implicit_operation.brackets
+        bracket_lower_consts: Dict[str, np.ndarray] = dict()
+        bracket_upper_consts: Dict[str, np.ndarray] = dict()
+        for k,(a,b) in implicit_operation.brackets:
+            if isinstance(a, np.ndarray):
+                bracket_lower_consts[k]=a
+            if isinstance(b, np.ndarray):
+                bracket_upper_consts[k]=b
+
         maxiter = implicit_operation.maxiter
 
         def linearize(comp, inputs, outputs, jacobian):
@@ -315,8 +346,14 @@ def create_implicit_component(
                 shape = residual.shape
                 if state_name not in expose_set:
 
-                    x1 = brackets_map[state_name][0] * np.ones(shape)
-                    x2 = brackets_map[state_name][1] * np.ones(shape)
+                    try:
+                        x1 = bracket_lower_consts[state_name][0] * np.ones(shape)
+                    except:
+                        x1 = inputs[comp.bracket_lower_vars[state_name][0]]
+                    try:
+                        x2 = bracket_lower_consts[state_name][1] * np.ones(shape)
+                    except:
+                        x2 = inputs[comp.bracket_upper_vars[state_name][1]]
                     r1 = comp._run_internal_model(
                         inputs,
                         outputs,
