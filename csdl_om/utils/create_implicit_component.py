@@ -2,6 +2,7 @@ from typing import Dict, List, Union, Set
 from csdl import ImplicitOperation, BracketedSearchOperation
 from csdl import Output
 from csdl.lang.variable import Variable
+from csdl.lang.declared_variable import DeclaredVariable
 from networkx.algorithms.core import k_core
 from openmdao.api import ImplicitComponent
 import numpy as np
@@ -18,9 +19,14 @@ def create_implicit_component(
     # end); op.parameters defined at this stage
 
     # get info from implicit_operation
+    # output/state name --> residual variable
     out_res_map: Dict[str, Output] = implicit_operation.out_res_map
-    out_in_map: Dict[str, Variable] = implicit_operation.out_in_map
-    res_out_map: Dict[str, Variable] = implicit_operation.res_out_map
+    # output/state name --> all input variables that influence output/state
+    out_in_map: Dict[str,
+                     List[DeclaredVariable]] = implicit_operation.out_in_map
+    # residual name --> output/state variable
+    res_out_map: Dict[str, DeclaredVariable] = implicit_operation.res_out_map
+    # names of exposed variables
     expose: List[str] = implicit_operation.expose
     for name in expose:
         if '.' in name:
@@ -274,22 +280,8 @@ def create_implicit_component(
 
                 # implicit output wrt inputs
                 for input_name in [i.name for i in out_in_map[state_name]]:
-                    if input_name is not state_name:
-                        if state_name in expose_set:
-                            # compute derivative for residual associated
-                            # with exposed wrt argument
-                            jacobian[state_name,
-                                     input_name] = -internal_model_jacobian[
-                                         residual_name, input_name]
                     jacobian[state_name, input_name] = 0
-
-                # residual wrt corresponding implicit output
-                jacobian[state_name, state_name] = 0
-
-                comp.derivs[state_name] = np.diag(
-                    internal_model_jacobian[residual_name,
-                                            state_name]).reshape(
-                                                residual.shape)
+                    # NOTE: not this: internal_model_jacobian[ residual_name, input_name]
 
         def _run_internal_model(
             comp,
