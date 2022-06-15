@@ -11,6 +11,7 @@ from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
 
 def add_input(comp, in_name,in_var):
+    print("Adding input {}".format(in_name))
     try:
         comp.add_input(
             in_name,
@@ -24,10 +25,12 @@ def add_input(comp, in_name,in_var):
             shape_by_conn=in_var.shape_by_conn,
             copy_shape=in_var.copy_shape,
         )
+        print("Added input {}".format(in_name))
 
         # set values
         comp.sim[in_name] = in_var.val
     except:
+        print("Adding input {} failed".format(in_name))
         pass
 
 
@@ -82,11 +85,11 @@ def create_implicit_component(
     bracket_lower_vars: Dict[str, str] = dict()
     bracket_upper_vars: Dict[str, str] = dict()
     if isinstance(implicit_operation, BracketedSearchOperation):
-        for k, (a,b) in implicit_operation.brackets:
+        for output_name, (a,b) in implicit_operation.brackets.items():
             if isinstance(a, Variable):
-                bracket_lower_vars[k]=a.name
+                bracket_lower_vars[output_name] = a.name
             if isinstance(b, Variable):
-                bracket_upper_vars[k]=b.name
+                bracket_upper_vars[output_name] = b.name
 
 
     # Define the setup method for the component class
@@ -94,12 +97,14 @@ def create_implicit_component(
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
 
-        for k, v in bracket_lower_vars: 
+        # if brackets are variables instead of constants add the inputs
+        # to the component
+        for output_name, v in bracket_lower_vars:
             if isinstance(v, Variable):
-                add_input(comp, k,v)
-        for k, v in bracket_upper_vars: 
+                add_input(comp, output_name, v)
+        for output_name, v in bracket_upper_vars:
             if isinstance(v, Variable):
-                add_input(comp, k,v)
+                add_input(comp, output_name, v)
 
 
 
@@ -159,12 +164,13 @@ def create_implicit_component(
         for out in implicit_operation.outs:
             if out.name in out_in_map.keys():
                 # need to check if keys exist because exposed variables
-                # that residuals depend on will not be in out_in_map?
+                # that residuals depend on will not be in out_in_map
                 comp.declare_partials(
                     of=out.name,
                     wrt=out.name,
                 )
                 in_vars = out_in_map[out.name]
+                bracket_names = set(list(bracket_lower_vars.keys()) + list(bracket_upper_vars.keys()))
                 for in_var in list(filter(lambda x: x not in bracket_lower_vars.keys() and x not in bracket_upper_vars.keys(), in_vars)):
                     if in_var in expose_set or in_var.name in out_in_map.keys(
                     ):
@@ -173,7 +179,15 @@ def create_implicit_component(
                             wrt=in_var.name,
                             val=0.,
                         )
+                    if in_var in bracket_names:
+                        print('declaring partials wrt bracket {}'.format(in_var))
+                        comp.declare_partials(
+                            of=out.name,
+                            wrt=in_var.name,
+                            val=0.,
+                        )
                     else:
+                        print("Declaring {} wrt {}".format(out.name, in_var.name))
                         comp.declare_partials(
                             of=out.name,
                             wrt=in_var.name,
@@ -281,11 +295,11 @@ def create_implicit_component(
     elif isinstance(implicit_operation, BracketedSearchOperation):
         bracket_lower_consts: Dict[str, np.ndarray] = dict()
         bracket_upper_consts: Dict[str, np.ndarray] = dict()
-        for k,(a,b) in implicit_operation.brackets:
+        for output_name, (a, b) in implicit_operation.brackets.items():
             if isinstance(a, np.ndarray):
-                bracket_lower_consts[k]=a
+                bracket_lower_consts[output_name] = a
             if isinstance(b, np.ndarray):
-                bracket_upper_consts[k]=b
+                bracket_upper_consts[output_name] = b
 
         maxiter = implicit_operation.maxiter
 
