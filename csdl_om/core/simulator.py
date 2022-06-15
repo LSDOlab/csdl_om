@@ -320,19 +320,18 @@ class Simulator(SimulatorBase):
             x.var
             for x in filter(lambda x: isinstance(x.var, Input), variables)
         ]
-        for node in inputs:
-            indep.add_output(
-                name=node.name,
-                shape=node.shape,
-                val=node.val,
-            )
         if len(inputs) > 0:
+            for node in inputs:
+                indep.add_output(
+                    name=node.name,
+                    shape=node.shape,
+                    val=node.val,
+                )
             group.add_subsystem('indeps', indep, promotes=['*'])
 
         # Add design variables; CSDL has already checked that all
         # design variables that have been added are inputs created by
         # user.
-        print(type(design_variables), design_variables)
         for k, v in design_variables.items():
             group.add_design_var(k, **v)
 
@@ -366,9 +365,9 @@ class Simulator(SimulatorBase):
                     node.constraints,
                     objective if node.objective is None else node.objective,
                 )
-                # assign solver in case group contains unnecessary
+                # TODO: assign solver in case group contains unnecessary
                 # feedbacks
-                sys.nonlinear_solver = NonlinearBlockGS(iprint=0)
+                # sys.nonlinear_solver = NonlinearBlockGS(iprint=0)
                 print("Adding group named {} with promotes {}".format(
                     name, node.promotes))
                 group.add_subsystem(
