@@ -11,8 +11,6 @@ setup(
         # in later versions of openmdao
         'openmdao==3.10.0',
         'numpy>=1.21',
-        'dash==1.2.0',
-        'dash-daq==0.1.0',
         'pint',
         'guppy3',
         'scipy>=1.8.0',
