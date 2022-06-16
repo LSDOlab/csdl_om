@@ -257,6 +257,7 @@ def create_implicit_component(
     elif isinstance(implicit_operation, BracketedSearchOperation):
         brackets_map = implicit_operation.brackets
         maxiter = implicit_operation.maxiter
+        tol = implicit_operation.tol
 
         def linearize(comp, inputs, outputs, jacobian):
             comp._set_values(inputs, outputs)
@@ -295,65 +296,105 @@ def create_implicit_component(
             comp,
             inputs,
             outputs,
-            implicit_output_name,
             bracket,
         ) -> Dict[str, Output]:
             comp._set_values(inputs, outputs)
-            comp.sim[implicit_output_name] = bracket
+            for state_name, val in bracket.items():
+                comp.sim[state_name] = val
             comp.sim.run()
 
-            residuals: Dict[str, Output] = dict()
-            for residual_name, implicit_output in res_out_map.items():
-                residuals[implicit_output.name] = np.array(
+            residuals: Dict[str, np.ndarray] = dict()
+            for residual_name, state in res_out_map.items():
+                residuals[state.name] = np.array(
                     comp.sim[residual_name])
             # TODO: also get exposed variables (outside this function)
             return residuals
 
         def solve_nonlinear(comp, inputs, outputs):
-            for residual in residuals:
-                state_name = res_out_map[residual.name].name
+            x_lower=dict()
+            x_upper=dict()
+            r_lower=dict()
+            r_upper=dict()
+
+            # update bracket for state associated with each residual
+            for state_name, residual in out_res_map.items():
                 shape = residual.shape
                 if state_name not in expose_set:
+                    x_lower[state_name] = brackets_map[state_name][0] * np.ones(shape)
+                    x_upper[state_name] = brackets_map[state_name][1] * np.ones(shape)
 
-                    x1 = brackets_map[state_name][0] * np.ones(shape)
-                    x2 = brackets_map[state_name][1] * np.ones(shape)
-                    r1 = comp._run_internal_model(
-                        inputs,
-                        outputs,
-                        state_name,
-                        x1,
-                    )
-                    r2 = comp._run_internal_model(
-                        inputs,
-                        outputs,
-                        state_name,
-                        x2,
-                    )
-                    mask1 = r1[state_name] >= r2[state_name]
-                    mask2 = r1[state_name] < r2[state_name]
+            # compute residuals at each bracket value
+            r_lower = comp._run_internal_model(
+                    inputs,
+                    outputs,
+                    x_lower,
+                )
+            r_upper = comp._run_internal_model(
+                inputs,
+                outputs,
+                x_upper,
+            )
 
-                    xp = np.empty(shape)
-                    xp[mask1] = x1[mask1]
-                    xp[mask2] = x2[mask2]
+            xp = dict()
+            xn = dict()
+            # initialize bracket array elements associated with
+            # positive and negative residuals so that updates to
+            # brackets are associated with a residual of the
+            # correct sign from the start of the bracketed search
+            for state_name, residual in out_res_map.items():
+                shape = residual.shape
+                if state_name not in expose_set:
+                    mask1 = r_lower[state_name] >= r_upper[state_name]
+                    mask2 = r_lower[state_name] < r_upper[state_name]
 
-                    xn = np.empty(shape)
-                    xn[mask1] = x2[mask1]
-                    xn[mask2] = x1[mask2]
+                    xp[state_name] = np.empty(shape)
+                    xp[state_name][mask1] = x_lower[state_name][mask1]
+                    xp[state_name][mask2] = x_upper[state_name][mask2]
 
-                    for _ in range(maxiter):
-                        x = 0.5 * xp + 0.5 * xn
-                        r = comp._run_internal_model(
-                            inputs,
-                            outputs,
-                            state_name,
-                            x,
-                        )
+                    xn[state_name] = np.empty(shape)
+                    xn[state_name][mask1] = x_upper[state_name][mask1]
+                xn[state_name][mask2] = x_lower[state_name][mask2]
+
+            # run solver
+            x = dict()
+            converge = False
+            for _ in range(maxiter):
+                for residual in residuals:
+                    state_name = res_out_map[residual.name].name
+                    shape = residual.shape
+                    if state_name not in expose_set:
+                        x[state_name] = 0.5 * xp[state_name] + 0.5 * xn[state_name]
+                # evaluate all residuals at point in middle of bracket
+                r = comp._run_internal_model(
+                    inputs,
+                    outputs,
+                    x,
+                )
+                # check if all residuals in middle of bracket are within
+                # tolerance
+                converge = True
+                for v in r.values():
+                    if np.linalg.norm(v) >= tol:
+                        converge = False
+                if converge is True:
+                    break
+
+                # get new residual bracket values
+                for state_name, residual in out_res_map.items():
+                    shape = residual.shape
+                    if state_name not in expose_set:
+                        # make sure bracket always contains r == 0
                         mask_p = r[state_name] >= 0
                         mask_n = r[state_name] < 0
-                        xp[mask_p] = x[mask_p]
-                        xn[mask_n] = x[mask_n]
+                        xp[state_name][mask_p] = x[state_name][mask_p]
+                        xn[state_name][mask_n] = x[state_name][mask_n]
 
-                    outputs[state_name] = 0.5 * xp + 0.5 * xn
+            if converge is False:
+                raise Warning("Bracketed search did not converge after {} iterations.".format((maxiter)))
+
+            # solver terminates
+            for state_name in out_res_map.keys():
+                outputs[state_name] = x[state_name]
 
             # update exposed intermediate variables
             for intermediate in expose_set:
