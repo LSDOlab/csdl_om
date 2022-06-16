@@ -11,7 +11,7 @@ setup(
         'numpy>=1.21',
         'pint',
         'guppy3',
-        'scipy>=1.7.1',
+        'scipy>=1.8.0',
     ],
 )
 

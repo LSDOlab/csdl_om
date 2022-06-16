@@ -1,37 +1,13 @@
-from typing import Dict, List, Union, Set, Tuple
+from typing import Dict, List, Union, Set
 from csdl import ImplicitOperation, BracketedSearchOperation
 from csdl import Output
 from csdl.core.variable import Variable
-from csdl.core.declared_variable import DeclaredVariable
 from networkx.algorithms.core import k_core
 from openmdao.api import ImplicitComponent
 import numpy as np
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
-
-def add_input(comp, in_name,in_var):
-    print("Adding input {}".format(in_name))
-    try:
-        comp.add_input(
-            in_name,
-            val=in_var.val,
-            shape=in_var.shape,
-            src_indices=in_var.src_indices,
-            flat_src_indices=in_var.flat_src_indices,
-            units=in_var.units,
-            desc=in_var.desc,
-            tags=in_var.tags,
-            shape_by_conn=in_var.shape_by_conn,
-            copy_shape=in_var.copy_shape,
-        )
-        print("Added input {}".format(in_name))
-
-        # set values
-        comp.sim[in_name] = in_var.val
-    except:
-        print("Adding input {} failed".format(in_name))
-        pass
 
 
 def create_implicit_component(
@@ -80,7 +56,7 @@ def create_implicit_component(
         for intermediate in intermediate_outputs:
             intermediate_name = intermediate.name
             comp.sim[intermediate_name] = outputs[intermediate_name]
-
+        
     # allow setting brackets using variables
     bracket_lower_vars: Dict[str, str] = dict()
     bracket_upper_vars: Dict[str, str] = dict()
@@ -97,14 +73,14 @@ def create_implicit_component(
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
 
-        # if brackets are variables instead of constants add the inputs
+        # TODO: if brackets are variables instead of constants add the inputs
         # to the component
-        for output_name, v in bracket_lower_vars:
-            if isinstance(v, Variable):
-                add_input(comp, output_name, v)
-        for output_name, v in bracket_upper_vars:
-            if isinstance(v, Variable):
-                add_input(comp, output_name, v)
+        # for output_name, v in bracket_lower_vars:
+        #     if isinstance(v, Variable):
+        #         add_input(comp, output_name, v)
+        # for output_name, v in bracket_upper_vars:
+        #     if isinstance(v, Variable):
+        #         add_input(comp, output_name, v)
 
 
 
@@ -159,19 +135,37 @@ def create_implicit_component(
                     if in_name not in out_in_map.keys():
                         # use try/except because multiple outputs can
                         # depend on the same input
-                        add_input(comp, in_name, in_var.val)
+                        try:
+                            comp.add_input(
+                                in_name,
+                                val=in_var.val,
+                                shape=in_var.shape,
+                                src_indices=in_var.src_indices,
+                                flat_src_indices=in_var.flat_src_indices,
+                                units=in_var.units,
+                                desc=in_var.desc,
+                                tags=in_var.tags,
+                                shape_by_conn=in_var.shape_by_conn,
+                                copy_shape=in_var.copy_shape,
+                            )
+
+                            # set values
+                            comp.sim[in_name] = in_var.val
+                        except:
+                            pass
 
         for out in implicit_operation.outs:
             if out.name in out_in_map.keys():
                 # need to check if keys exist because exposed variables
-                # that residuals depend on will not be in out_in_map
+                # that residuals depend on will not be in out_in_map?
                 comp.declare_partials(
                     of=out.name,
                     wrt=out.name,
                 )
+                # TODO: do not declare partials wrt brackets if onlya
+                # used as brackets
                 in_vars = out_in_map[out.name]
-                bracket_names = set(list(bracket_lower_vars.keys()) + list(bracket_upper_vars.keys()))
-                for in_var in list(filter(lambda x: x not in bracket_lower_vars.keys() and x not in bracket_upper_vars.keys(), in_vars)):
+                for in_var in in_vars:
                     if in_var in expose_set or in_var.name in out_in_map.keys(
                     ):
                         comp.declare_partials(
@@ -179,15 +173,7 @@ def create_implicit_component(
                             wrt=in_var.name,
                             val=0.,
                         )
-                    if in_var in bracket_names:
-                        print('declaring partials wrt bracket {}'.format(in_var))
-                        comp.declare_partials(
-                            of=out.name,
-                            wrt=in_var.name,
-                            val=0.,
-                        )
                     else:
-                        print("Declaring {} wrt {}".format(out.name, in_var.name))
                         comp.declare_partials(
                             of=out.name,
                             wrt=in_var.name,
@@ -293,6 +279,8 @@ def create_implicit_component(
         implicit_component = component_class()
         return implicit_component
     elif isinstance(implicit_operation, BracketedSearchOperation):
+        tol = implicit_operation.tol
+        brackets_map = implicit_operation.brackets
         bracket_lower_consts: Dict[str, np.ndarray] = dict()
         bracket_upper_consts: Dict[str, np.ndarray] = dict()
         for output_name, (a, b) in implicit_operation.brackets.items():
@@ -300,6 +288,7 @@ def create_implicit_component(
                 bracket_lower_consts[output_name] = a
             if isinstance(b, np.ndarray):
                 bracket_upper_consts[output_name] = b
+
 
         maxiter = implicit_operation.maxiter
 
@@ -340,71 +329,105 @@ def create_implicit_component(
             comp,
             inputs,
             outputs,
-            implicit_output_name,
             bracket,
         ) -> Dict[str, Output]:
             comp._set_values(inputs, outputs)
-            comp.sim[implicit_output_name] = bracket
+            for state_name, val in bracket.items():
+                comp.sim[state_name] = val
             comp.sim.run()
 
-            residuals: Dict[str, Output] = dict()
-            for residual_name, implicit_output in res_out_map.items():
-                residuals[implicit_output.name] = np.array(
+            residuals: Dict[str, np.ndarray] = dict()
+            for residual_name, state in res_out_map.items():
+                residuals[state.name] = np.array(
                     comp.sim[residual_name])
             # TODO: also get exposed variables (outside this function)
             return residuals
 
         def solve_nonlinear(comp, inputs, outputs):
-            for residual in residuals:
-                state_name = res_out_map[residual.name].name
+            x_lower=dict()
+            x_upper=dict()
+            r_lower=dict()
+            r_upper=dict()
+
+            # update bracket for state associated with each residual
+            for state_name, residual in out_res_map.items():
                 shape = residual.shape
                 if state_name not in expose_set:
+                    x_lower[state_name] = brackets_map[state_name][0] * np.ones(shape)
+                    x_upper[state_name] = brackets_map[state_name][1] * np.ones(shape)
 
-                    try:
-                        x1 = bracket_lower_consts[state_name][0] * np.ones(shape)
-                    except:
-                        x1 = inputs[comp.bracket_lower_vars[state_name][0]]
-                    try:
-                        x2 = bracket_lower_consts[state_name][1] * np.ones(shape)
-                    except:
-                        x2 = inputs[comp.bracket_upper_vars[state_name][1]]
-                    r1 = comp._run_internal_model(
-                        inputs,
-                        outputs,
-                        state_name,
-                        x1,
-                    )
-                    r2 = comp._run_internal_model(
-                        inputs,
-                        outputs,
-                        state_name,
-                        x2,
-                    )
-                    mask1 = r1[state_name] >= r2[state_name]
-                    mask2 = r1[state_name] < r2[state_name]
+            # compute residuals at each bracket value
+            r_lower = comp._run_internal_model(
+                    inputs,
+                    outputs,
+                    x_lower,
+                )
+            r_upper = comp._run_internal_model(
+                inputs,
+                outputs,
+                x_upper,
+            )
 
-                    xp = np.empty(shape)
-                    xp[mask1] = x1[mask1]
-                    xp[mask2] = x2[mask2]
+            xp = dict()
+            xn = dict()
+            # initialize bracket array elements associated with
+            # positive and negative residuals so that updates to
+            # brackets are associated with a residual of the
+            # correct sign from the start of the bracketed search
+            for state_name, residual in out_res_map.items():
+                shape = residual.shape
+                if state_name not in expose_set:
+                    mask1 = r_lower[state_name] >= r_upper[state_name]
+                    mask2 = r_lower[state_name] < r_upper[state_name]
 
-                    xn = np.empty(shape)
-                    xn[mask1] = x2[mask1]
-                    xn[mask2] = x1[mask2]
+                    xp[state_name] = np.empty(shape)
+                    xp[state_name][mask1] = x_lower[state_name][mask1]
+                    xp[state_name][mask2] = x_upper[state_name][mask2]
 
-                    for _ in range(maxiter):
-                        x = 0.5 * xp + 0.5 * xn
-                        r = comp._run_internal_model(
-                            inputs,
-                            outputs,
-                            state_name,
-                            x,
-                        )
+                    xn[state_name] = np.empty(shape)
+                    xn[state_name][mask1] = x_upper[state_name][mask1]
+                xn[state_name][mask2] = x_lower[state_name][mask2]
+
+            # run solver
+            x = dict()
+            converge = False
+            for _ in range(maxiter):
+                for residual in residuals:
+                    state_name = res_out_map[residual.name].name
+                    shape = residual.shape
+                    if state_name not in expose_set:
+                        x[state_name] = 0.5 * xp[state_name] + 0.5 * xn[state_name]
+                # evaluate all residuals at point in middle of bracket
+                r = comp._run_internal_model(
+                    inputs,
+                    outputs,
+                    x,
+                )
+                # check if all residuals in middle of bracket are within
+                # tolerance
+                converge = True
+                for v in r.values():
+                    if np.linalg.norm(v) >= tol:
+                        converge = False
+                if converge is True:
+                    break
+
+                # get new residual bracket values
+                for state_name, residual in out_res_map.items():
+                    shape = residual.shape
+                    if state_name not in expose_set:
+                        # make sure bracket always contains r == 0
                         mask_p = r[state_name] >= 0
                         mask_n = r[state_name] < 0
-                        xp[mask_p] = x[mask_p]
-                        xn[mask_n] = x[mask_n]
+                        xp[state_name][mask_p] = x[state_name][mask_p]
+                        xn[state_name][mask_n] = x[state_name][mask_n]
 
-                    outputs[state_name] = 0.5 * xp + 0.5 * xn
+            if converge is False:
+                raise Warning("Bracketed search did not converge after {} iterations.".format((maxiter)))
+
+            # solver terminates
+            for state_name in out_res_map.keys():
+                outputs[state_name] = x[state_name]
 
             # update exposed intermediate variables
             for intermediate in expose_set:
