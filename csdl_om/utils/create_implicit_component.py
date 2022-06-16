@@ -72,35 +72,34 @@ def create_implicit_component(implicit_operation: ImplicitOperation
         comp.derivs = dict()
         comp.sim = Simulator(implicit_operation._model, )
 
-        # TODO: if brackets are variables instead of constants add the
-        # inputs to the component
-        for output_name, v in bracket_lower_vars:
-            if isinstance(v, Variable):
+        # if brackets are variables instead of constants add the inputs
+        # to the component
+        for (a,b) in implicit_operation.brackets.values():
+            if isinstance(a, Variable):
                 comp.add_input(
-                    output_name,
-                    val=in_var.val,
-                    shape=in_var.shape,
-                    src_indices=in_var.src_indices,
-                    flat_src_indices=in_var.flat_src_indices,
-                    units=in_var.units,
-                    desc=in_var.desc,
-                    tags=in_var.tags,
-                    shape_by_conn=in_var.shape_by_conn,
-                    copy_shape=in_var.copy_shape,
+                    a.name,
+                    val=a.val,
+                    shape=a.shape,
+                    src_indices=a.src_indices,
+                    flat_src_indices=a.flat_src_indices,
+                    units=a.units,
+                    desc=a.desc,
+                    tags=a.tags,
+                    shape_by_conn=a.shape_by_conn,
+                    copy_shape=a.copy_shape,
                 )
-        for output_name, v in bracket_upper_vars:
-            if isinstance(v, Variable):
+            if isinstance(b, Variable):
                 comp.add_input(
-                    output_name,
-                    val=in_var.val,
-                    shape=in_var.shape,
-                    src_indices=in_var.src_indices,
-                    flat_src_indices=in_var.flat_src_indices,
-                    units=in_var.units,
-                    desc=in_var.desc,
-                    tags=in_var.tags,
-                    shape_by_conn=in_var.shape_by_conn,
-                    copy_shape=in_var.copy_shape,
+                    b.name,
+                    val=b.val,
+                    shape=b.shape,
+                    src_indices=b.src_indices,
+                    flat_src_indices=b.flat_src_indices,
+                    units=b.units,
+                    desc=b.desc,
+                    tags=b.tags,
+                    shape_by_conn=b.shape_by_conn,
+                    copy_shape=b.copy_shape,
                 )
 
         for out in implicit_operation.outs:
@@ -370,14 +369,13 @@ def create_implicit_component(implicit_operation: ImplicitOperation
             for state_name, residual in out_res_map.items():
                 shape = residual.shape
                 if state_name not in expose_set:
-                    if state_name in bracket_lower_vars.keys():
-                        bracket_name = bracket_lower_vars[state_name]
-                        x_lower[state_name] = inputs[bracket_name]
+                    if isinstance(brackets_map[state_name][0], Variable):
+                        x_lower[state_name] = inputs[brackets_map[state_name][0].name]
                     else:
-                        x_lower[state_name] = brackets_map[state_name][0] * np.ones(shape) 
-                    if state_name in bracket_upper_vars.keys():
-                        bracket_name = bracket_upper_vars[state_name]
-                        x_upper[state_name] = inputs[bracket_name]
+                        x_lower[state_name] = brackets_map[state_name][0] * np.ones(shape)
+
+                    if isinstance(brackets_map[state_name][1], Variable):
+                        x_upper[state_name] = inputs[brackets_map[state_name][1].name]
                     else:
                         x_upper[state_name] = brackets_map[state_name][1] * np.ones(shape)
 
