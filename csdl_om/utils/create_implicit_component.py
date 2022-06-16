@@ -74,33 +74,34 @@ def create_implicit_component(implicit_operation: ImplicitOperation
 
         # if brackets are variables instead of constants add the inputs
         # to the component
-        for (a,b) in implicit_operation.brackets.values():
-            if isinstance(a, Variable):
-                comp.add_input(
-                    a.name,
-                    val=a.val,
-                    shape=a.shape,
-                    src_indices=a.src_indices,
-                    flat_src_indices=a.flat_src_indices,
-                    units=a.units,
-                    desc=a.desc,
-                    tags=a.tags,
-                    shape_by_conn=a.shape_by_conn,
-                    copy_shape=a.copy_shape,
-                )
-            if isinstance(b, Variable):
-                comp.add_input(
-                    b.name,
-                    val=b.val,
-                    shape=b.shape,
-                    src_indices=b.src_indices,
-                    flat_src_indices=b.flat_src_indices,
-                    units=b.units,
-                    desc=b.desc,
-                    tags=b.tags,
-                    shape_by_conn=b.shape_by_conn,
-                    copy_shape=b.copy_shape,
-                )
+        if isinstance(implicit_operation, BracketedSearchOperation):
+            for (a,b) in implicit_operation.brackets.values():
+                if isinstance(a, Variable):
+                    comp.add_input(
+                        a.name,
+                        val=a.val,
+                        shape=a.shape,
+                        src_indices=a.src_indices,
+                        flat_src_indices=a.flat_src_indices,
+                        units=a.units,
+                        desc=a.desc,
+                        tags=a.tags,
+                        shape_by_conn=a.shape_by_conn,
+                        copy_shape=a.copy_shape,
+                    )
+                if isinstance(b, Variable):
+                    comp.add_input(
+                        b.name,
+                        val=b.val,
+                        shape=b.shape,
+                        src_indices=b.src_indices,
+                        flat_src_indices=b.flat_src_indices,
+                        units=b.units,
+                        desc=b.desc,
+                        tags=b.tags,
+                        shape_by_conn=b.shape_by_conn,
+                        copy_shape=b.copy_shape,
+                    )
 
         for out in implicit_operation.outs:
             # STATES
