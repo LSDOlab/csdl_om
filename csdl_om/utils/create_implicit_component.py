@@ -61,7 +61,18 @@ def create_implicit_component(implicit_operation: ImplicitOperation
     bracket_lower_vars: Dict[str, str] = dict()
     bracket_upper_vars: Dict[str, str] = dict()
     if isinstance(implicit_operation, BracketedSearchOperation):
+        # The type of implicit_operation.brackets is
+        # Dict[str, Tuple[ndarray | Variable, ndarray | Variable]]
+        # Luca assigned a bracket using two DeclaredVariable objects
+        print(type( implicit_operation.brackets)) # dict (correct)
         for output_name, (a, b) in implicit_operation.brackets.items():
+            print(output_name) # B_delta (correct)
+            print(type(implicit_operation.brackets[output_name])) # tuple (correct)
+            print(type(implicit_operation.brackets[output_name][0])) # numpy.ndarray (1.a) (incorrect)
+            print(type(a)) # numpy.ndarray (incorrect) (1.b)
+            print(a is implicit_operation.brackets[output_name][0]) # True (correct)
+            print(a, implicit_operation.brackets[output_name][0]) # both DeclaredVariable (2) (correct)
+            # How can Python produce both (1) and (2) results?
             if isinstance(a, Variable):
                 bracket_lower_vars[output_name] = a.name
             if isinstance(b, Variable):
@@ -75,7 +86,7 @@ def create_implicit_component(implicit_operation: ImplicitOperation
         # if brackets are variables instead of constants add the inputs
         # to the component
         if isinstance(implicit_operation, BracketedSearchOperation):
-            for (a,b) in implicit_operation.brackets.values():
+            for (a, b) in implicit_operation.brackets.values():
                 if isinstance(a, Variable):
                     comp.add_input(
                         a.name,
@@ -300,6 +311,11 @@ def create_implicit_component(implicit_operation: ImplicitOperation
     elif isinstance(implicit_operation, BracketedSearchOperation):
         tol = implicit_operation.tol
         brackets_map = implicit_operation.brackets
+        print('brackets_map', brackets_map )
+        for k,v in brackets_map.items():
+            print(k)
+            print(type(v))
+            print('  ', v[0], v[1])
         bracket_lower_consts: Dict[str, np.ndarray] = dict()
         bracket_upper_consts: Dict[str, np.ndarray] = dict()
         for output_name, (a, b) in implicit_operation.brackets.items():
@@ -370,15 +386,30 @@ def create_implicit_component(implicit_operation: ImplicitOperation
             for state_name, residual in out_res_map.items():
                 shape = residual.shape
                 if state_name not in expose_set:
-                    if isinstance(brackets_map[state_name][0], Variable):
-                        x_lower[state_name] = inputs[brackets_map[state_name][0].name]
+                    a, b = brackets_map[state_name]
+                    print('brackets_map[state_name][0]', state_name, a,
+                          type(a))
+                    print('brackets_map[state_name][1]', state_name, b,
+                          type(b))
+                    exit()
+                    if isinstance(a, Variable):
+                        print('VARIABLE')
+                        print('name 0', a.name)
+                        x_lower[state_name] = inputs[a.name]
                     else:
-                        x_lower[state_name] = brackets_map[state_name][0] * np.ones(shape)
+                        print('NDARRAY')
+                        print('val 0', a)
+                        x_lower[state_name] = a * np.ones(shape)
 
-                    if isinstance(brackets_map[state_name][1], Variable):
-                        x_upper[state_name] = inputs[brackets_map[state_name][1].name]
+                    if isinstance(b, Variable):
+                        print('VARIABLE')
+                        print('name 0', b.name)
+                        x_lower[state_name] = inputs[b.name]
                     else:
-                        x_upper[state_name] = brackets_map[state_name][1] * np.ones(shape)
+                        print('NDARRAY')
+                        print('val 0', b)
+                        x_lower[state_name] = b * np.ones(shape)
+
 
             # compute residuals at each bracket value
             r_lower = comp._run_internal_model(
