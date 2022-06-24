@@ -365,9 +365,9 @@ class Simulator(SimulatorBase):
                     node.constraints,
                     objective if node.objective is None else node.objective,
                 )
-                # TODO: assign solver in case group contains unnecessary
+                # assign solver in case group contains unnecessary
                 # feedbacks
-                # sys.nonlinear_solver = NonlinearBlockGS(iprint=0)
+                sys.nonlinear_solver = NonlinearBlockGS(iprint=0)
                 print("Adding group named {} with promotes {}".format(
                     name, node.promotes))
                 group.add_subsystem(
