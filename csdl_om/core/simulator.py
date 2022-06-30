@@ -9,10 +9,18 @@ from csdl import (
     CustomImplicitOperation,
     SimulatorBase,
     BracketedSearchOperation,
+    GraphRepresentation,
 )
+from csdl.rep import (
+    ModelNode,
+    VariableNode,
+    OperationNode,
+)
+from csdl.utils.prepend_namespace import prepend_namespace
 import numpy as np
 from csdl_om.core.problem import ProblemNew
 from openmdao.api import Group, IndepVarComp, ImplicitComponent
+from csdl.rep.get_nodes import *
 from openmdao.core.component import Component
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
@@ -33,6 +41,45 @@ from typing import Dict, List, Union
 from collections import OrderedDict
 import time
 from warnings import warn
+
+EMPTY_DICT = dict()
+
+DerivativeFreeSolvers = (
+    NonlinearBlockGS,
+    NonlinearBlockJac,
+    NonlinearRunOnce,
+)
+
+
+def add_group_with_derivative_free_solver(name, comp, group, op):
+    g = Group()
+    assign_solvers(g, op)
+    g.add_subsystem(
+        'op',
+        comp,
+        promotes=['*'],
+    )
+    group.add_subsystem(
+        name,
+        g,
+        promotes=['*'],
+    )
+
+
+def assign_solvers(sys, op):
+    # NOTE: CSDL makes sure that we always have a
+    # linear solver when it's required
+    ls = construct_linear_solver(op.linear_solver)
+    if ls is not None:
+        sys.linear_solver = ls
+    if op.nonlinear_solver is not None:
+        sys.nonlinear_solver = construct_nonlinear_solver(op.nonlinear_solver)
+
+
+def om_name_from_csdl_node(node, prefix=None) -> str:
+    if prefix is None:
+        return type(node).__name__ + node.name
+    return type(node).__name__ + prefix + '_' + node.name
 
 
 def _return_format_error(return_format: str):
@@ -347,117 +394,119 @@ class Simulator(SimulatorBase):
         # implements the backend compiler phae for CSDL using OpenMDAO.
         # ==============================================================
 
-        # Store operation types in a dictionary to avoid storing
-        # duplicates
-        operation_types: Dict[CustomOperation, Component] = dict()
-        for node in reversed(model.sorted_nodes):
-            # Create Component for Model or Operation added using
-            # Model.add
-            if isinstance(node, Subgraph):
-                if isinstance(node.submodel, Model):
-                    name = name = type(
-                        node).__name__ + '_model' + node.name if node.name[
-                            0] == '_' else node.name
-                    sys = self.build_group(
-                        node.submodel,
-                        objective,
-                    )
+        # Store operation and component instances in a dictionary to
+        # avoid storing duplicates
+        custom_operation_instance_to_component_type_map: Dict[
+            CustomOperation, Component] = dict()
+        objective_is_defined = objective != EMPTY_DICT
+
+        for node in sorted_nodes:
+            if isinstance(node, ModelNode):
+                # Create an OpenMDAO Group object corresponding to the
+                # CSDL Model object.
+
+                # If parent model does not have objective, get objective from
+                # current model; only one objective allowed in model
+                # hierarchy
+                if objective_is_defined and node.objective != EMPTY_DICT:
+                    # TODO: pass namespace to build_group for error messages
+                    # raise ValueError("Cannot define more than one objective. Objective {} defined in {} when objective already defined in a model at a higher level in the model hierarchy".format(objective['name'], prepend_namespace(namespace, node.name)))
+                    raise ValueError("Cannot define more than one objective.")
+                name = om_name_from_csdl_node(node)
+                graph = node.graph
+                sorted_nodes = node.sorted_nodes
+                design_variables = node.design_variables
+                constraints = node.constraints
+                sys = self.build_group(
+                    graph,
+                    sorted_nodes,
+                    design_variables,
+                    constraints,
+                    objective
+                    if node.objective == EMPTY_DICT else node.objective,
+                )
+                group.add_subsystem(
+                    name,
+                    sys,
+                    promotes=['*'] if node.promotes is None else node.promotes,
+                )
+            elif isinstance(node, OperationNode):
+                # Create an OpenMDAO Component object corresponding to the
+                # CSDL Operation object.
+                op = node.op
+                if isinstance(op, StandardOperation):
                     group.add_subsystem(
-                        name,
-                        sys,
-                        promotes=node.promotes,
-                    )
-            elif isinstance(node, Operation):
-                if isinstance(node, StandardOperation):
-                    name = name = type(
-                        node).__name__ + '_std_op' + node.name if node.name[
-                            0] == '_' else node.name
-                    sys = create_std_component(node)
-                    group.add_subsystem(
-                        name,
-                        sys,
+                        om_name_from_csdl_node(node, prefix='_std_op'),
+                        create_std_component(op),
                         promotes=['*'],
                     )
-                elif isinstance(node, CustomOperation):
-                    if isinstance(node, CustomImplicitOperation):
-                        name = type(
-                            node
-                        ).__name__ + '_custom_implict_op' + node.name if node.name[
-                            0] == '_' else node.name
-                    else:
-                        name = type(
-                            node
-                        ).__name__ + '_custom_op' + node.name if node.name[
-                            0] == '_' else node.name
-                    sys = create_custom_component(operation_types, node)
-                    # don't promote, issue connections
+                elif isinstance(op, CustomExplicitOperation):
                     group.add_subsystem(
-                        name,
-                        sys,
+                        om_name_from_csdl_node(node, prefix='_custom_op'),
+                        create_custom_component(
+                            custom_operation_instance_to_component_type_map,
+                            op,
+                        ),
                         promotes=['*'],
-                        # promotes=[],
                     )
-                    # for outer, inner in zip(
-                    #     [x.name for x in node.dependencies],
-                    #         node.input_meta.keys(),
-                    # ):
-                    #     group.connect(outer, '{}.{}'.format(name,
-                    #     inner))
-                    # TODO: if registered output has no dependents, OM
-                    # will not be able to form a connection in parent
-                    # models
-                    # if len(
-                    #         list(
-                    #             filter(lambda x: len(x.dependents) > 0,
-                    #                    node.dependents))) > 0:
-                    #     # if registered output has no dependent
-                    #     # operations, then OpenMDAO will not be able to
-                    #     # form a connection between components
-                    #     for inner, outer in zip(
-                    #             node.output_meta.keys(),
-                    #         [x.name for x in node.dependents],
-                    #     ):
-                    #         group.connect('{}.{}'.format(name, inner), outer)
-                elif isinstance(node,
-                                (ImplicitOperation, BracketedSearchOperation)):
-                    name = type(
-                        node._model
-                    ).__name__ + '_implicit_op' + node.name if node.name[
-                        0] == '_' else node.name
-                    if isinstance(node, ImplicitOperation) and isinstance(
-                            node.nonlinear_solver,
-                        (NonlinearBlockGS, NonlinearBlockJac,
-                         NonlinearRunOnce)):
-                        sys = Group()
-                        sys.add_subsystem(
+                elif isinstance(op, CustomImplicitOperation):
+                    name = om_name_from_csdl_node(
+                        comp,
+                        prefix='_custom_implict_op',
+                    )
+                    comp = create_custom_component(
+                        custom_operation_instance_to_component_type_map,
+                        op,
+                    )
+                    if isinstance(op.nonlinear_solver, DerivativeFreeSolvers):
+                        add_group_with_derivative_free_solver(
                             name,
-                            create_implicit_component(node),
-                            promotes=['*'],
+                            comp,
+                            group,
+                            op,
                         )
                     else:
-                        sys = create_implicit_component(node)
-                    if isinstance(node, ImplicitOperation):
-                        # NOTE: CSDL makes sure that we always have a
-                        # linear solver when it's required
-                        ls = construct_linear_solver(node.linear_solver)
-                        if ls is not None:
-                            sys.linear_solver = ls
-                        if node.nonlinear_solver is not None:
-                            sys.nonlinear_solver = construct_nonlinear_solver(
-                                node.nonlinear_solver)
-                    group.add_subsystem(
-                        name,
-                        sys,
-                        promotes=['*'],
+                        assign_solvers(comp, op)
+                        group.add_subsystem(
+                            name,
+                            comp,
+                            promotes=['*'],
+                        )
+                elif isinstance(op, BracketedSearchOperation):
+                    add_group_with_derivative_free_solver(
+                        om_name_from_csdl_node(
+                            node,
+                            prefix='_bracketed_op',
+                        ),
+                        create_implicit_component(op),
+                        group,
+                        op,
                     )
-                else:
-                    raise TypeError(node.name +
-                                    " is not a recognized Operation object")
+                elif isinstance(op, ImplicitOperation):
+                    name = om_name_from_csdl_node(node, prefix='_implicit_op')
+                    comp = create_implicit_component(op)
+                    if isinstance(
+                            op.nonlinear_solver,
+                            DerivativeFreeSolvers,
+                    ):
+                        add_group_with_derivative_free_solver(
+                            name,
+                            create_implicit_component(op),
+                            group,
+                            op,
+                        )
+                    else:
+                        assign_solvers(comp, op)
+                        group.add_subsystem(
+                            name,
+                            comp,
+                            promotes=['*'],
+                        )
 
-        del operation_types
+        del custom_operation_instance_to_component_type_map
+
         # issue connections
-        # assume they are checked in CSDL compiler front end
-        for (a, b) in model.connections:
+        for (a, b) in connections:
             group.connect(a, b)
 
         # if current model has objective, add objective
