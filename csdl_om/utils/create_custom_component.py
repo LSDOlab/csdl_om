@@ -180,6 +180,9 @@ def create_custom_component(operation_types: Dict[CustomOperation, Component],
                             'In ImplicitOperation {}, method {} shares a name with a method used by OpenMDAO'
                             .format(type(op).__name__, method))
 
+                # Create a new component type type for each instance of
+                # an operation and map operation instance to component
+                # type
                 u = type(
                     component_class_name,
                     (ExplicitComponent, ),

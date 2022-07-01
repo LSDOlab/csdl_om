@@ -1,21 +1,18 @@
 from csdl import (
-    Model,
     ImplicitOperation,
-    Operation,
     StandardOperation,
     CustomOperation,
-    Subgraph,
     CustomExplicitOperation,
     CustomImplicitOperation,
     SimulatorBase,
     BracketedSearchOperation,
     GraphRepresentation,
 )
-from csdl.rep import (
-    ModelNode,
-    VariableNode,
-    OperationNode,
-)
+from csdl.rep.ir_node import IRNode
+from csdl.rep.model_node import ModelNode
+from csdl.rep.variable_node import VariableNode
+from csdl.rep.operation_node import OperationNode
+from csdl.rep.implicit_operation_node import ImplicitOperationNode
 from csdl.utils.prepend_namespace import prepend_namespace
 import numpy as np
 from csdl_om.core.problem import ProblemNew
@@ -33,14 +30,13 @@ from csdl_om.utils.create_custom_component import create_custom_component
 from csdl_om.utils.create_implicit_component import create_implicit_component
 from csdl_om.utils.construct_linear_solver import construct_linear_solver
 from csdl_om.utils.construct_nonlinear_solver import construct_nonlinear_solver
+from networkx import DiGraph
 from datetime import datetime
 from platform import system
 import pickle
 import os
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any, Tuple
 from collections import OrderedDict
-import time
-from warnings import warn
 
 EMPTY_DICT = dict()
 
@@ -92,56 +88,36 @@ class Simulator(SimulatorBase):
 
     def __init__(
         self,
-        model,
+        rep: GraphRepresentation,
         mode='auto',
     ):
+        super().__init__(rep)
         if mode not in ['auto', 'fwd', 'rev']:
             raise ValueError(
                 'Invalid option for `mode`, {}, must be \'auto\', \'fwd\', or \'rev\'.'
                 .format(mode))
-        self.implicit_model_types = dict()
-        self.iter = 0
-        self.data_dir = None
-        self._totals: Union[OrderedDict, np.ndarray] = OrderedDict()
-        self._reporting_time = False
-        if not isinstance(model, Model):
-            raise TypeError(
-                "CSDL-OM only accepts CSDL Model specifications to construct a Simulator."
-            )
-        # ==============================================================
-        # Front end defines Intermediate Representation (IR)
-        # Middle end performs implementation-independent optimizations
-        if Simulator.REPORT_COMPILE_TIME_FRONT_END is True:
-            start_front_end = time.time()
-            # prevent restarting timer for simulators inside implicit
-            # components
-            Simulator.REPORT_COMPILE_TIME_FRONT_END = False
-            # only top level simulator reports front end compile time
-            self._reporting_time = True
-        model.define()
-
-        # report time
-        if self._reporting_time is True:
-            finish_front_end = time.time()
-            front_end_compile_time = finish_front_end - start_front_end
-            print('======== COMPILE TIME (FRONT END) =======')
-            print(front_end_compile_time, 's')
-            print('=========================================')
-        # ==============================================================
-
         # ==========================================================
         # Construct executable object; in the case of CSDL-OM, the
         # executable object is a Python object (an object of
         # OpenMDAO's Problem class) in main memory, as
-        # opposed to souce code in a compiled language like C/C++,
-        # or even a native binary.
+        # opposed to a native binary that a compiler for a language like
+        # C/C++ would generate.
         # ==========================================================
+        self.executable: ProblemNew = ProblemNew(
+            self.build_group(
+                rep.unflat_graph,
+                rep.unflat_sorted_nodes,
+                dict(),
+                dict(),
+                dict(),
+                connections=rep.connections,
+            ))
 
-        self.prob: ProblemNew = ProblemNew(self.build_group(
-            model,
-            None,
-        ))
-        self.prob.setup(
+        # After constructing an executable object, OpenMDAO still needs
+        # to run its own compilation step. A lot of the verification
+        # steps within OpenMDAO have already been done in the CSDL front
+        # end, so this extra work is unusual for a CSDL back end.
+        self.executable.setup(
             force_alloc_complex=True,
             mode=mode,
         )
@@ -149,25 +125,20 @@ class Simulator(SimulatorBase):
         self._initialize_keys()
 
     def _initialize_keys(self):
+        """
+        ???
+        """
 
-        self.dv_keys = list(self.prob.model.get_design_vars().keys())
+        self.dv_keys = list(self.executable.model.get_design_vars().keys())
         self.constraint_keys = list(
-            self.prob.model.get_constraints(recurse=True).keys())
-        objectives = self.prob.model.get_objectives()
+            self.executable.model.get_constraints(recurse=True).keys())
+        objectives = self.executable.model.get_objectives()
         try:
             self.obj_key = list(objectives.keys())[0]
             self.obj_val = self[self.obj_key]
         except:
             self.obj_key = None
             self.obj_val = None
-
-    def __getitem__(self, key) -> np.ndarray:
-        if self.iter < 1:
-            warn("Simulation has not been run. Reading default value.")
-        return self.prob[key]
-
-    def __setitem__(self, key, val):
-        self.prob[key] = val
 
     def run(
         self,
@@ -271,12 +242,12 @@ class Simulator(SimulatorBase):
                 print(self.data_dir)
 
             # OpenMDAO Problem.run_model stuff
-            if self.prob.model.iter_count > 0:
-                self.prob.model._reset_iter_counts()
-            self.prob.final_setup()
-            self.prob._run_counter += 1
-            record_model_options(self.prob, self.prob._run_counter)
-            self.prob.model._clear_iprint()
+            if self.executable.model.iter_count > 0:
+                self.executable.model._reset_iter_counts()
+            self.executable.final_setup()
+            self.executable._run_counter += 1
+            record_model_options(self.executable, self.executable._run_counter)
+            self.executable.model._clear_iprint()
 
         if time_run is True:
             try:
@@ -286,7 +257,7 @@ class Simulator(SimulatorBase):
             start_run_time = time.time()
 
         # run model
-        self.prob.model.run_solve_nonlinear()
+        self.executable.model.run_solve_nonlinear()
 
         # collect data
         data = dict()
@@ -320,72 +291,77 @@ class Simulator(SimulatorBase):
         from openmdao.api import n2
         from time import sleep
         self.run(**kwargs)
-        n2(self.prob)
+        n2(self.executable)
         # need this delay so that a browser tab opens for each n2
         # diagram before the next n2 diagram gets generated
         sleep(1)
         if recursive is True:
-            for subsys in self.prob.model._subsystems_allprocs.values():
+            for subsys in self.executable.model._subsystems_allprocs.values():
                 if isinstance(subsys.system, ImplicitComponent):
                     subsys.system.sim.visualize_implementation(
                         recursive=recursive)
                 elif isinstance(subsys.system, Group):
+                    # ImplicitComponent objects using derivative-free solvers
+                    # are contained within a Group object
                     self._visualize_group(subsys.system)
 
     def _visualize_group(self, group):
         for subsys in group._subsystems_allprocs.values():
             if isinstance(subsys.system, ImplicitComponent):
+                # ImplicitComponent objects using derivative-free
+                # solvers are contained within a Group object
                 subsys.system.sim.visualize_implementation(recursive=True)
             elif isinstance(subsys.system, Group):
                 self._visualize_group(subsys.system)
 
+    # TODO: store dvs, objective, constraints, connections in GraphRepresentation
     def build_group(
         self,
-        model,
-        objective,
+        graph: DiGraph,
+        sorted_nodes: list[IRNode],
+        design_variables: Dict[str, Dict[str, Any]],
+        constraints: Dict[str, dict],
+        objective: Dict[str, Any],
+        connections: list[Tuple[str, str]] = [],
+        namespace: str = '',
     ) -> Group:
         """
-        `model: Model`
-
-        The `Model` used to build the `Simulator`
-
-        `objective: dict`
-
-        objective from parent model
+        Build an OpenMDAO Group object corresponding to each CSDL Model
+        object in the model hierarchy. The entire model hierarchy will
+        be implemented recursively after a single call to this method.
         """
-
-        # If parent model does not have objective, get objective from
-        # current model; only one objective allowed in model hierarchy
-        if model.objective is not None:
-            if objective is None:
-                objective = model.objective
-            else:
-                raise ValueError("Cannot define more than one objective")
-
-        # Build system from IR
+        # Make an OpenMDAO Group object for each CSDL Model object
         group = Group()
 
         # OpenMDAO represents top level system inputs using the concept
-        # of an independent variable, so we add an independent variable
-        # corresponding to each CSDL model input; Model inputs the first
+        # of an IdependentVariableComponent whose outputs are the
+        # system level inputs; Since OpenMDAO uses the unflat graph
+        # representation, system level inputs must be defined using an
+        # IdependentVariableComponent object within each OpenMDAO Group
+        # corresponding to a CSDL Model. Model inputs the first
         # things we define in our model ensure that the n2 diagram is
         # upper triangular/Jacobian is lower triangular when possible.
         # Later, we call build_system recursively, so we do not have
         # an error or warning if a model lacks inputs
-        indep = IndepVarComp()
-        for node in model.inputs:
-            indep.add_output(
-                name=node.name,
-                shape=node.shape,
-                val=node.val,
-            )
-        if len(model.inputs) > 0:
+        variables: list[VariableNode] = get_var_nodes(graph)
+        inputs: list[Input] = [
+            x.var
+            for x in filter(lambda x: isinstance(x.var, Input), variables)
+        ]
+        if len(inputs) > 0:
+            indep = IndepVarComp()
+            for node in inputs:
+                indep.add_output(
+                    name=node.name,
+                    shape=node.shape,
+                    val=node.val,
+                )
             group.add_subsystem('indeps', indep, promotes=['*'])
 
         # Add design variables; CSDL has already checked that all
         # design variables that have been added are inputs created by
         # user.
-        for k, v in model.design_variables.items():
+        for k, v in design_variables.items():
             group.add_design_var(k, **v)
 
         # ==============================================================
@@ -409,10 +385,12 @@ class Simulator(SimulatorBase):
                 # current model; only one objective allowed in model
                 # hierarchy
                 if objective_is_defined and node.objective != EMPTY_DICT:
-                    # TODO: pass namespace to build_group for error messages
-                    # raise ValueError("Cannot define more than one objective. Objective {} defined in {} when objective already defined in a model at a higher level in the model hierarchy".format(objective['name'], prepend_namespace(namespace, node.name)))
-                    raise ValueError("Cannot define more than one objective.")
-                name = om_name_from_csdl_node(node)
+                    raise ValueError(
+                        "Cannot define more than one objective. Objective {} defined in {} when objective already defined in a model at a higher level in the model hierarchy"
+                        .format(objective['name'],
+                                prepend_namespace(namespace, node.name)))
+                name = type(node).__name__ + node.name if node.name[
+                    0] == '_' else node.name
                 graph = node.graph
                 sorted_nodes = node.sorted_nodes
                 design_variables = node.design_variables
@@ -424,12 +402,57 @@ class Simulator(SimulatorBase):
                     constraints,
                     objective
                     if node.objective == EMPTY_DICT else node.objective,
+                    namespace=prepend_namespace(namespace, node.name),
                 )
                 group.add_subsystem(
                     name,
                     sys,
                     promotes=['*'] if node.promotes is None else node.promotes,
                 )
+            elif isinstance(node, ImplicitOperationNode):
+                print('NODE IS IMPLICT OPERATION NODE')
+                op = node.op
+                if isinstance(op, BracketedSearchOperation):
+                    print('OPERATION IS BRACKETED SEARCH OPERATION')
+                    comp = create_implicit_component(node),
+                    print('comp type', type(comp))
+                    g = Group()
+                    g.add_subsystem(
+                        'op',
+                        Group(),
+                        promotes=['*'],
+                    )
+                    group.add_subsystem(
+                        om_name_from_csdl_node(
+                            node,
+                            prefix='_bracketed_op',
+                        ),
+                        g,
+                        promotes=['*'],
+                    )
+                elif isinstance(op, ImplicitOperation):
+                    print('OPERATION IS IMPLICT OPERATION')
+                    name = om_name_from_csdl_node(node, prefix='_implicit_op')
+                    comp = create_implicit_component(node)
+                    if isinstance(
+                            op.nonlinear_solver,
+                            DerivativeFreeSolvers,
+                    ):
+                        add_group_with_derivative_free_solver(
+                            name,
+                            comp,
+                            group,
+                            op,
+                        )
+                    else:
+                        assign_solvers(comp, op)
+                        group.add_subsystem(
+                            name,
+                            comp,
+                            promotes=['*'],
+                        )
+                else:
+                    print('OPERATION UNKOWN')
             elif isinstance(node, OperationNode):
                 # Create an OpenMDAO Component object corresponding to the
                 # CSDL Operation object.
@@ -449,6 +472,7 @@ class Simulator(SimulatorBase):
                         ),
                         promotes=['*'],
                     )
+
                 elif isinstance(op, CustomImplicitOperation):
                     name = om_name_from_csdl_node(
                         comp,
@@ -465,36 +489,7 @@ class Simulator(SimulatorBase):
                             group,
                             op,
                         )
-                    else:
-                        assign_solvers(comp, op)
-                        group.add_subsystem(
-                            name,
-                            comp,
-                            promotes=['*'],
-                        )
-                elif isinstance(op, BracketedSearchOperation):
-                    add_group_with_derivative_free_solver(
-                        om_name_from_csdl_node(
-                            node,
-                            prefix='_bracketed_op',
-                        ),
-                        create_implicit_component(op),
-                        group,
-                        op,
-                    )
-                elif isinstance(op, ImplicitOperation):
-                    name = om_name_from_csdl_node(node, prefix='_implicit_op')
-                    comp = create_implicit_component(op)
-                    if isinstance(
-                            op.nonlinear_solver,
-                            DerivativeFreeSolvers,
-                    ):
-                        add_group_with_derivative_free_solver(
-                            name,
-                            create_implicit_component(op),
-                            group,
-                            op,
-                        )
+
                     else:
                         assign_solvers(comp, op)
                         group.add_subsystem(
@@ -510,20 +505,20 @@ class Simulator(SimulatorBase):
             group.connect(a, b)
 
         # if current model has objective, add objective
-        if model.objective is not None:
+        if objective != EMPTY_DICT:
             group.add_objective(
-                model.objective['name'],
-                ref=model.objective['ref'],
-                ref0=model.objective['ref0'],
-                index=model.objective['index'],
-                units=model.objective['units'],
-                adder=model.objective['adder'],
-                scaler=model.objective['scaler'],
-                parallel_deriv_color=model.objective['parallel_deriv_color'],
-                cache_linear_solution=model.objective['cache_linear_solution'],
+                objective['name'],
+                ref=objective['ref'],
+                ref0=objective['ref0'],
+                index=objective['index'],
+                units=objective['units'],
+                adder=objective['adder'],
+                scaler=objective['scaler'],
+                parallel_deriv_color=objective['parallel_deriv_color'],
+                cache_linear_solution=objective['cache_linear_solution'],
             )
 
-        for name, meta in model.constraints.items():
+        for name, meta in constraints.items():
             group.add_constraint(name, **meta)
         return group
 
@@ -544,7 +539,7 @@ class Simulator(SimulatorBase):
     ):
         if self.iter == 0:
             self.run()
-        return self.prob.check_partials(
+        return self.executable.check_partials(
             out_stream=out_stream,
             includes=includes,
             excludes=excludes,
@@ -562,23 +557,11 @@ class Simulator(SimulatorBase):
     def assert_check_partials(self, result, atol=1e-8, rtol=1e-8):
         assert_check_partials(result, atol=atol, rtol=rtol)
 
-    # def update_design_variables(
-    #     self,
-    #     vals: np.ndarray,
-    #     return_format='array',
-    # ) -> Union[OrderedDict, np.ndarray]:
-    #     if return_format == 'array':
-    #         d = self.prob.model.get_design_variables()
-    #         for key in self.wrt:
-    #             d[key].flatten()
-    #     if return_format == 'dict':
-    #         return self.prob.model.get_design_variables()
-    #     raise _value_error(return_format)
     def get_design_variable_metadata(self) -> dict:
-        return self.prob.model.get_design_vars()
+        return self.executable.model.get_design_vars()
 
     def get_constraints_metadata(self) -> OrderedDict:
-        return self.prob.model.get_constraints()
+        return self.executable.model.get_constraints()
 
     def update_design_variables(
         self,
@@ -589,7 +572,7 @@ class Simulator(SimulatorBase):
             raise ValueError("Model does not define any design variables")
         if input_format == 'array':
             start_idx = 0
-            dvs = self.prob.model.get_design_vars()
+            dvs = self.executable.model.get_design_vars()
             for key in self.dv_keys:
                 meta = dvs[key]
                 size = meta['size']
@@ -609,7 +592,7 @@ class Simulator(SimulatorBase):
         if return_format == 'array':
             return self._concatenate_values(self.dv_keys)
         if return_format == 'dict':
-            return self.prob.model.get_design_vars()
+            return self.executable.model.get_design_vars()
         raise _return_format_error(return_format)
 
     def objective(self) -> float:
@@ -629,7 +612,7 @@ class Simulator(SimulatorBase):
         if return_format == 'array':
             return self._concatenate_values(self.constraint_keys)
         if return_format == 'dict':
-            return self.prob.model.get_constraints()
+            return self.executable.model.get_constraints()
         raise _return_format_error(return_format)
 
     # def implicit_outputs(self):
@@ -648,7 +631,7 @@ class Simulator(SimulatorBase):
         self,
         return_format='array',
     ) -> Union[OrderedDict, np.ndarray]:
-        self._totals = self.prob.compute_totals(
+        self._totals = self.executable.compute_totals(
             of=[self.obj_key] + self.constraint_keys,
             wrt=self.dv_keys,
             return_format=return_format,
@@ -690,7 +673,7 @@ class Simulator(SimulatorBase):
         _return_format_error(return_format)
 
     def add_recorder(self, recorder):
-        self.prob.setup_save_data(recorder)
+        self.executable.setup_save_data(recorder)
 
     # def residuals_jacobian(self):
     #     """
