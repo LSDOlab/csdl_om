@@ -414,12 +414,14 @@ class Simulator(SimulatorBase):
                 op = node.op
                 if isinstance(op, BracketedSearchOperation):
                     print('OPERATION IS BRACKETED SEARCH OPERATION')
+                    # FIXME: Why is this a tuple?
                     comp = create_implicit_component(node),
-                    print('comp type', type(comp))
                     g = Group()
                     g.add_subsystem(
                         'op',
-                        Group(),
+                        # KLUDGE: This is a tuple for some reason and
+                        # unpacking it is a workaround
+                        *comp,
                         promotes=['*'],
                     )
                     group.add_subsystem(

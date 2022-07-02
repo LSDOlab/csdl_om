@@ -35,6 +35,20 @@ class CSDLImplicitComponent(ImplicitComponent):
         outputs,
         bracket,
     ) -> Dict[str, Output]:
+        pass
+
+
+def define_fn_run_internal_model(
+    res_out_map
+) -> Callable[
+    [CSDLImplicitComponent, Any, Any, dict()], Dict[str, np.ndarray]]:
+
+    def _run_internal_model(
+        self,
+        inputs,
+        outputs,
+        bracket,
+    ) -> Dict[str, Output]:
         print('RUNNING INTERNAL MODEL')
         self._set_values(inputs, outputs)
         for state_name, val in bracket.items():
@@ -48,16 +62,20 @@ class CSDLImplicitComponent(ImplicitComponent):
         # TODO: also get exposed variables (outside this function)
         return residuals
 
+    return _run_internal_model
+
 
 def get_implicit_info(
     implicit_operation: ImplicitOperation
 ) -> Tuple[Dict[str, Output], Dict[str, list[DeclaredVariable]], Dict[
-        str, DeclaredVariable], List[str], Set[str], List[Variable],
-           List[Output], List[str], List[str], List[str], List[Output], ]:
+        str, Union[DeclaredVariable,
+                   Output]], List[str], Set[str], List[Variable], List[Output],
+           List[str], List[str], List[str], List[Output], ]:
     out_res_map: Dict[str, Output] = implicit_operation.out_res_map
     out_in_map: Dict[str,
                      list[DeclaredVariable]] = implicit_operation.out_in_map
-    res_out_map: Dict[str, DeclaredVariable] = implicit_operation.res_out_map
+    res_out_map: Dict[str, Union[DeclaredVariable,
+                                 Output]] = implicit_operation.res_out_map
     expose: List[str] = implicit_operation.expose
     for name in expose:
         if '.' in name:
@@ -85,7 +103,6 @@ def get_implicit_info(
         expose_set,
         states,
         residuals,
-        input_names,
         input_names,
         residual_names,
         state_names,
@@ -270,6 +287,7 @@ def define_fn_setup_bracketed(
         expose_set,
         out_in_map,
     )
+
     # b = define_fn_add_inputs_bracketed_search(implicit_operation)
 
     def setup(comp: CSDLImplicitComponent):
@@ -431,9 +449,13 @@ def define_fn_solve_linear(res_out_map: Dict[str, DeclaredVariable], ):
 
 
 def define_fn_solve_nonlinear_bracketed(
+    res_out_map,
     out_res_map: Dict[str, Output],
+    residuals,
+    brackets_map,
     expose_set: Set[str],
     maxiter: int,
+    tol: float,
 ):
 
     def solve_nonlinear(comp, inputs, outputs):
@@ -449,23 +471,25 @@ def define_fn_solve_nonlinear_bracketed(
                 a, b = brackets_map[state_name]
                 print('brackets_map[state_name][0]', state_name, a, type(a))
                 print('brackets_map[state_name][1]', state_name, b, type(b))
-                if isinstance(a, Variable):
-                    print('VARIABLE')
-                    print('name 0', a.name)
-                    x_lower[state_name] = inputs[a.name]
-                else:
-                    print('NDARRAY')
-                    print('val 0', a)
-                    x_lower[state_name] = a * np.ones(shape)
+                x_lower[state_name] = a * np.ones(shape)
+                x_upper[state_name] = b * np.ones(shape)
+                # if isinstance(a, Variable):
+                #     print('VARIABLE')
+                #     print('name 0', a.name)
+                #     x_lower[state_name] = inputs[a.name]
+                # else:
+                #     print('NDARRAY')
+                #     print('val 0', a)
+                #     x_lower[state_name] = a * np.ones(shape)
 
-                if isinstance(b, Variable):
-                    print('VARIABLE')
-                    print('name 0', b.name)
-                    x_lower[state_name] = inputs[b.name]
-                else:
-                    print('NDARRAY')
-                    print('val 0', b)
-                    x_lower[state_name] = b * np.ones(shape)
+                # if isinstance(b, Variable):
+                #     print('VARIABLE')
+                #     print('name 0', b.name)
+                #     x_upper[state_name] = inputs[b.name]
+                # else:
+                #     print('NDARRAY')
+                #     print('val 0', b)
+                #     x_upper[state_name] = b * np.ones(shape)
 
         # compute residuals at each bracket value
         r_lower = comp._run_internal_model(
@@ -609,7 +633,6 @@ def create_implicit_component(
         states,
         residuals,
         input_names,
-        input_names,
         residual_names,
         state_names,
         intermediate_outputs,
@@ -647,6 +670,7 @@ def create_implicit_component(
             intermediate_outputs,
             state_names,
         ),
+        _run_internal_model=define_fn_run_internal_model(res_out_map),
     )
     if isinstance(implicit_operation, BracketedSearchOperation):
         # IMPLICIT COMPONENT WITH BRACKETED SEARCH
@@ -661,15 +685,25 @@ def create_implicit_component(
                 bracket_upper_consts[output_name] = b
         component_methods[
             'solve_nonlinear'] = define_fn_solve_nonlinear_bracketed(
+                res_out_map,
                 out_res_map,
+                residuals,
+                brackets_map,
                 expose_set,
                 implicit_operation.maxiter,
+                implicit_operation.tol,
             )
         component_methods['solve_linear'] = define_fn_solve_linear(
+            res_out_map, )
+        component_methods['linearize'] = define_fn_linearize_bracketed(
+            residual_names,
+            expose_set,
+            input_names,
+            state_names,
+            residuals,
             res_out_map,
-            implicit_operation.maxiter,
+            out_in_map,
         )
-        component_methods['linearize'] = define_fn_linearize_bracketed()
         component_type = type(
             component_class_name,
             (CSDLImplicitComponent, ),
@@ -677,6 +711,7 @@ def create_implicit_component(
         )
         print('CONSTRUCTING BRACKETED SEARCH COMPONENT')
         component = component_type(rep)
+        print(type(component))
         print('FINISHED CONSTRUCTING BRACKETED SEARCH COMPONENT')
         return component
     elif isinstance(
