@@ -10,6 +10,7 @@ from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
 from csdl.rep.graph_representation import GraphRepresentation
 from csdl.rep.implicit_operation_node import ImplicitOperationNode
+from warnings import warn
 
 DerivativeFreeSolver = (
     NonlinearBlockGS,
@@ -40,14 +41,17 @@ class CSDLImplicitComponent(ImplicitComponent):
 
 def define_fn_run_internal_model(
     res_out_map
-) -> Callable[
-    [CSDLImplicitComponent, Any, Any, dict()], Dict[str, np.ndarray]]:
+) -> Callable[[
+        CSDLImplicitComponent, Any, Any, Dict[str, Tuple[Union[
+            int, float, np.ndarray, Variable], Union[int, float, np.ndarray,
+                                                     Variable]]]
+], Dict[str, np.ndarray]]:
 
     def _run_internal_model(
         self,
         inputs,
         outputs,
-        bracket,
+        bracket: Dict[str, np.ndarray],
     ) -> Dict[str, Output]:
         print('RUNNING INTERNAL MODEL')
         self._set_values(inputs, outputs)
@@ -63,6 +67,24 @@ def define_fn_run_internal_model(
         return residuals
 
     return _run_internal_model
+
+        # def _run_internal_model(
+        #     comp,
+        #     inputs,
+        #     outputs,
+        #     implicit_output_name,
+        #     bracket,
+        # ) -> Dict[str, Output]:
+        #     comp._set_values(inputs, outputs)
+        #     comp.sim[implicit_output_name] = bracket
+        #     comp.sim.run()
+
+        #     residuals: Dict[str, Output] = dict()
+        #     for residual_name, implicit_output in res_out_map.items():
+        #         residuals[implicit_output.name] = np.array(
+        #             comp.sim[residual_name])
+        #     # TODO: also get exposed variables (outside this function)
+        #     return residuals
 
 
 def get_implicit_info(
@@ -147,31 +169,39 @@ def define_fn_add_inputs_bracketed_search(
         # to the component
         for (a, b) in implicit_operation.brackets.values():
             if isinstance(a, Variable):
-                comp.add_input(
-                    a.name,
-                    val=a.val,
-                    shape=a.shape,
-                    src_indices=a.src_indices,
-                    flat_src_indices=a.flat_src_indices,
-                    units=a.units,
-                    desc=a.desc,
-                    tags=a.tags,
-                    shape_by_conn=a.shape_by_conn,
-                    copy_shape=a.copy_shape,
-                )
+                # use try/except because the bracket may already be an input
+                try:
+                    comp.add_input(
+                        a.name,
+                        val=a.val,
+                        shape=a.shape,
+                        src_indices=a.src_indices,
+                        flat_src_indices=a.flat_src_indices,
+                        units=a.units,
+                        desc=a.desc,
+                        tags=a.tags,
+                        shape_by_conn=a.shape_by_conn,
+                        copy_shape=a.copy_shape,
+                    )
+                except:
+                    pass
             if isinstance(b, Variable):
-                comp.add_input(
-                    b.name,
-                    val=b.val,
-                    shape=b.shape,
-                    src_indices=b.src_indices,
-                    flat_src_indices=b.flat_src_indices,
-                    units=b.units,
-                    desc=b.desc,
-                    tags=b.tags,
-                    shape_by_conn=b.shape_by_conn,
-                    copy_shape=b.copy_shape,
-                )
+                # use try/except because the bracket may already be an input
+                try:
+                    comp.add_input(
+                        b.name,
+                        val=b.val,
+                        shape=b.shape,
+                        src_indices=b.src_indices,
+                        flat_src_indices=b.flat_src_indices,
+                        units=b.units,
+                        desc=b.desc,
+                        tags=b.tags,
+                        shape_by_conn=b.shape_by_conn,
+                        copy_shape=b.copy_shape,
+                    )
+                except:
+                    pass
 
     return add_inputs_bracketed_search
 
@@ -224,26 +254,29 @@ def define_fn_setup(
             # comp.sim[out.name] = out.val
 
             input_names_added = set()
-            for in_var in out_in_map[out.name]:
-                in_name = in_var.name
-                if in_name not in state_names and in_name not in input_names_added:
-                    comp.add_input(
-                        in_name,
-                        val=in_var.val,
-                        shape=in_var.shape,
-                        src_indices=in_var.src_indices,
-                        flat_src_indices=in_var.flat_src_indices,
-                        units=in_var.units,
-                        desc=in_var.desc,
-                        tags=in_var.tags,
-                        shape_by_conn=in_var.shape_by_conn,
-                        copy_shape=in_var.copy_shape,
-                    )
-                    input_names_added.add(in_name)
-                    print('setup input name', in_name)
+            if out.name not in expose_set:
+                for in_var in out_in_map[out.name]:
+                    in_name = in_var.name
+                    if in_name not in state_names and in_name not in input_names_added:
+                        comp.add_input(
+                            in_name,
+                            val=in_var.val,
+                            shape=in_var.shape,
+                            src_indices=in_var.src_indices,
+                            flat_src_indices=in_var.flat_src_indices,
+                            units=in_var.units,
+                            desc=in_var.desc,
+                            tags=in_var.tags,
+                            shape_by_conn=in_var.shape_by_conn,
+                            copy_shape=in_var.copy_shape,
+                        )
+                        input_names_added.add(in_name)
+                        print('setup input name', in_name)
+            else:
+                pass
 
-                    # set values
-                    # comp.sim[in_name] = in_var.val
+                # set values
+                # comp.sim[in_name] = in_var.val
             print(comp._var_rel2meta.keys())
 
         # declare partials
@@ -288,12 +321,12 @@ def define_fn_setup_bracketed(
         out_in_map,
     )
 
-    # b = define_fn_add_inputs_bracketed_search(implicit_operation)
+    b = define_fn_add_inputs_bracketed_search(implicit_operation)
 
     def setup(comp: CSDLImplicitComponent):
         print('RUNNING SETUP')
         a(comp)
-        # b(comp)
+        b(comp)
         print('FINISHED RUNNING SETUP')
 
     return setup
@@ -459,37 +492,25 @@ def define_fn_solve_nonlinear_bracketed(
 ):
 
     def solve_nonlinear(comp, inputs, outputs):
-        x_lower = dict()
-        x_upper = dict()
-        r_lower = dict()
-        r_upper = dict()
+        x_lower: Dict[str, np.ndarray] = dict()
+        x_upper: Dict[str, np.ndarray] = dict()
+        r_lower: Dict[str, np.ndarray] = dict()
+        r_upper: Dict[str, np.ndarray] = dict()
 
         # update bracket for state associated with each residual
         for state_name, residual in out_res_map.items():
             shape = residual.shape
             if state_name not in expose_set:
-                a, b = brackets_map[state_name]
-                print('brackets_map[state_name][0]', state_name, a, type(a))
-                print('brackets_map[state_name][1]', state_name, b, type(b))
-                x_lower[state_name] = a * np.ones(shape)
-                x_upper[state_name] = b * np.ones(shape)
-                # if isinstance(a, Variable):
-                #     print('VARIABLE')
-                #     print('name 0', a.name)
-                #     x_lower[state_name] = inputs[a.name]
-                # else:
-                #     print('NDARRAY')
-                #     print('val 0', a)
-                #     x_lower[state_name] = a * np.ones(shape)
+                l, u = brackets_map[state_name]
+                if isinstance(l, Variable):
+                    x_lower[state_name] = inputs[l.name]
+                else:
+                    x_lower[state_name] = l * np.ones(shape)
 
-                # if isinstance(b, Variable):
-                #     print('VARIABLE')
-                #     print('name 0', b.name)
-                #     x_upper[state_name] = inputs[b.name]
-                # else:
-                #     print('NDARRAY')
-                #     print('val 0', b)
-                #     x_upper[state_name] = b * np.ones(shape)
+                if isinstance(u, Variable):
+                    x_upper[state_name] = inputs[u.name]
+                else:
+                    x_upper[state_name] = u * np.ones(shape)
 
         # compute residuals at each bracket value
         r_lower = comp._run_internal_model(
@@ -502,9 +523,11 @@ def define_fn_solve_nonlinear_bracketed(
             outputs,
             x_upper,
         )
+        # print('r_lower', r_lower['x'])
+        # print('r_upper', r_upper['x'])
 
-        xp = dict()
-        xn = dict()
+        xp: Dict[str, np.ndarray] = dict()
+        xn: Dict[str, np.ndarray] = dict()
         # initialize bracket array elements associated with
         # positive and negative residuals so that updates to
         # brackets are associated with a residual of the
@@ -524,8 +547,9 @@ def define_fn_solve_nonlinear_bracketed(
             xn[state_name][mask2] = x_lower[state_name][mask2]
 
         # run solver
-        x = dict()
+        x: Dict[str, np.ndarray] = dict()
         converge = False
+        print("MAX ITER", maxiter)
         for _ in range(maxiter):
             for residual in residuals:
                 state_name = res_out_map[residual.name].name
@@ -558,9 +582,8 @@ def define_fn_solve_nonlinear_bracketed(
                     xn[state_name][mask_n] = x[state_name][mask_n]
 
         if converge is False:
-            raise Warning(
-                "Bracketed search did not converge after {} iterations.".
-                format((maxiter)))
+            warn("Bracketed search did not converge after {} iterations.".
+                 format((maxiter)))
 
         # solver terminates
         for state_name in out_res_map.keys():
@@ -583,6 +606,7 @@ def define_fn_linearize_bracketed(
     out_in_map: Dict[str, list[DeclaredVariable]],
 ) -> Callable[[CSDLImplicitComponent, Any, any, Any], None]:
 
+
     def linearize(comp: CSDLImplicitComponent, inputs, outputs, jacobian):
         comp._set_values(inputs, outputs)
 
@@ -599,21 +623,26 @@ def define_fn_linearize_bracketed(
 
             # implicit output wrt inputs
             for input_name in [i.name for i in out_in_map[state_name]]:
-                if input_name is not state_name:
-                    if state_name in expose_set:
-                        # compute derivative for residual associated
-                        # with exposed wrt argument
-                        jacobian[state_name,
-                                 input_name] = -internal_model_jacobian[
-                                     residual_name, input_name]
-                jacobian[state_name, input_name] = 0
+                if input_name in expose_set or state_name in expose_set:
+                    # compute derivative for residual associated
+                    # with exposed wrt argument
+                    jacobian[state_name,
+                             input_name] = -internal_model_jacobian[
+                                 residual_name, input_name]
+                # elif input_name != state_name:
+                #         jacobian[state_name,
+                #                 input_name] = internal_model_jacobian[
+                #                     residual_name, input_name]
 
-            # residual wrt corresponding implicit output
+            # compute derivative for residual associated with state wrt
+            # corresponding implicit output
+            # dy/dy (om) = dr/dy (internal model)
+            # This is not in the else case within the loop above because
+            # that would lead to repeated assignments of the same value
+            # to the dictionary item; both implementations should
+            # produce the same result
+            # jacobian[state_name, state_name] = internal_model_jacobian[residual_name, state_name]
             jacobian[state_name, state_name] = 0
-
-            comp.derivs[state_name] = np.diag(
-                internal_model_jacobian[residual_name,
-                                        state_name]).reshape(residual.shape)
 
     return linearize
 
