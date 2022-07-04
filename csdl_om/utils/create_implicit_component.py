@@ -387,11 +387,6 @@ def create_implicit_component(implicit_operation: ImplicitOperation
                 shape = residual.shape
                 if state_name not in expose_set:
                     a, b = brackets_map[state_name]
-                    print('brackets_map[state_name][0]', state_name, a,
-                          type(a))
-                    print('brackets_map[state_name][1]', state_name, b,
-                          type(b))
-                    exit()
                     if isinstance(a, Variable):
                         print('VARIABLE')
                         print('name 0', a.name)
