@@ -1,6 +1,6 @@
 ---
 name: Diagnostic issue
-about: Create a bug report or feature request for a change to `csdl`'s error output
+about: Create a bug report or feature request for a change to CSDL-OM's error output
 labels: diagnostics
 ---
 <!--

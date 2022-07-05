@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a bug report for CSDL.
+about: Create a bug report for CSDL-OM.
 labels: bug
 ---
 

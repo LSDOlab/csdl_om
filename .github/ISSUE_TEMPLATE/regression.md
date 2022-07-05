@@ -1,6 +1,6 @@
 ---
 name: Regression
-about: Report something that unexpectedly changed between CSDL versions.
+about: Report something that unexpectedly changed between CSDL/CSDL-OM versions.
 labels: bug-regression
 ---
 <!--

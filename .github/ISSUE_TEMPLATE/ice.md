@@ -1,6 +1,6 @@
 ---
 name: Internal Compiler Error
-about: Create a report for an internal compiler error in `csdl`.
+about: Create a report for an internal compiler error in CSDL-OM.
 labels: bug-ice
 ---
 <!--
