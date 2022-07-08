@@ -29,10 +29,8 @@ class SparseMatMatComp(ExplicitComponent):
 
         self.add_output(out_name, shape=output_shape)
 
-        # Y = AX
-        # [ik] = [ij][jk]
-        A_data = self.sparse_mat.data
         A_rows, A_cols = self.sparse_mat.nonzero()
+        A_data = self.sparse_mat[self.sparse_mat.nonzero()]
 
         row_indices = np.arange(num_outputs).reshape(output_shape)
         col_indices = np.arange(num_inputs).reshape(shape)
