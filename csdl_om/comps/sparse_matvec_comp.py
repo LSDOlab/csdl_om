@@ -9,7 +9,7 @@ class SparseMatVecComp(ExplicitComponent):
 
     Options
     -------
-    in_name: list[str]
+    in_name: List[str]
         Name of the input
 
     out_name: str

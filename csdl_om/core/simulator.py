@@ -318,11 +318,11 @@ class Simulator(SimulatorBase):
     def build_group(
         self,
         graph: DiGraph,
-        sorted_nodes: list[IRNode],
+        sorted_nodes: List[IRNode],
         design_variables: Dict[str, Dict[str, Any]],
         constraints: Dict[str, dict],
         objective: Dict[str, Any],
-        connections: list[Tuple[str, str]] = [],
+        connections: List[Tuple[str, str]] = [],
         namespace: str = '',
     ) -> Group:
         """
@@ -343,8 +343,8 @@ class Simulator(SimulatorBase):
         # upper triangular/Jacobian is lower triangular when possible.
         # Later, we call build_system recursively, so we do not have
         # an error or warning if a model lacks inputs
-        variables: list[VariableNode] = get_var_nodes(graph)
-        inputs: list[Input] = [
+        variables: List[VariableNode] = get_var_nodes(graph)
+        inputs: List[Input] = [
             x.var
             for x in filter(lambda x: isinstance(x.var, Input), variables)
         ]

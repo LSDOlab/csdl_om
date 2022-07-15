@@ -58,8 +58,8 @@ def define_fn_update_bracket_residuals(
 
 
 def define_fn_set_values(
-    out_in_map: Dict[str, list[DeclaredVariable]],
-    state_names: list[str],
+    out_in_map: Dict[str, List[DeclaredVariable]],
+    state_names: List[str],
 ) -> Callable[[CSDLImplicitComponent, Any, Any], None]:
 
     def _set_values(comp: CSDLImplicitComponent, inputs, outputs):
@@ -127,10 +127,10 @@ def define_fn_add_inputs_bracketed_search(
 
 def define_fn_setup(
     outs: Tuple[Output, ...],
-    state_names: list[str],
+    state_names: List[str],
     exposed_set: Set[str],
-    out_in_map: Dict[str, list[DeclaredVariable]],
-    exp_in_map: Dict[str, list[DeclaredVariable]],
+    out_in_map: Dict[str, List[DeclaredVariable]],
+    exp_in_map: Dict[str, List[DeclaredVariable]],
     exposed_variables: Dict[str, Output],
 ) -> Callable[[CSDLImplicitComponent], None]:
     # Define the setup method for the component class
@@ -300,14 +300,14 @@ def define_fn_solve_residual_equations(
 
 
 def define_fn_compute_derivatives(
-    residual_names: list[str],
+    residual_names: List[str],
     exposed_set: Set[str],
-    input_names: list[str],
-    state_names: list[str],
+    input_names: List[str],
+    state_names: List[str],
     res_out_map: Dict[str, DeclaredVariable],
     out_res_map: Dict[str, DeclaredVariable],
-    out_in_map: Dict[str, list[DeclaredVariable]],
-    exp_in_map: Dict[str, list[DeclaredVariable]],
+    out_in_map: Dict[str, List[DeclaredVariable]],
+    exp_in_map: Dict[str, List[DeclaredVariable]],
     exposed_variables: Dict[str, Output],
 ) -> Callable[[CSDLImplicitComponent, Any, Any, Any], None]:
 
@@ -361,14 +361,14 @@ def define_fn_compute_derivatives(
 
 
 def define_fn_compute_derivatives_derivative_free(
-    residual_names: list[str],
+    residual_names: List[str],
     exposed_set: Set[str],
-    input_names: list[str],
-    state_names: list[str],
+    input_names: List[str],
+    state_names: List[str],
     res_out_map: Dict[str, DeclaredVariable],
     out_res_map: Dict[str, DeclaredVariable],
-    out_in_map: Dict[str, list[DeclaredVariable]],
-    exp_in_map: Dict[str, list[DeclaredVariable]],
+    out_in_map: Dict[str, List[DeclaredVariable]],
+    exp_in_map: Dict[str, List[DeclaredVariable]],
     exposed_variables: Dict[str, Output],
 ) -> Callable[[CSDLImplicitComponent, Any, Any, Any], None]:
 
@@ -555,13 +555,13 @@ def define_fn_solve_residual_equations_bracketed(
 
 
 def define_fn_compute_derivatives_bracketed(
-    residual_names: list[str],
+    residual_names: List[str],
     exposed_set: Set[str],
-    input_names: list[str],
-    state_names: list[str],
-    residuals: list[Output],
+    input_names: List[str],
+    state_names: List[str],
+    residuals: List[Output],
     res_out_map: Dict[str, DeclaredVariable],
-    out_in_map: Dict[str, list[DeclaredVariable]],
+    out_in_map: Dict[str, List[DeclaredVariable]],
 ) -> Callable[[CSDLImplicitComponent, Any, any, Any], None]:
 
     def linearize(comp: CSDLImplicitComponent, inputs, outputs, jacobian):
