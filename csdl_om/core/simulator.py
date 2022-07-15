@@ -468,15 +468,14 @@ class Simulator(SimulatorBase):
                         ),
                         promotes=['*'],
                     )
-
                 elif isinstance(op, CustomImplicitOperation):
-                    name = om_name_from_csdl_node(
-                        comp,
-                        prefix='_custom_implict_op',
-                    )
                     comp = create_custom_component(
                         custom_operation_instance_to_component_type_map,
                         op,
+                    )
+                    name = om_name_from_csdl_node(
+                        comp,
+                        prefix='_custom_implict_op',
                     )
                     if isinstance(op.nonlinear_solver, DerivativeFreeSolvers):
                         add_group_with_derivative_free_solver(

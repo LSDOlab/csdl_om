@@ -2,6 +2,7 @@ import numpy as np
 from openmdao.api import ExplicitComponent
 from scipy.sparse import coo_array
 
+
 class SparseMatMatComp(ExplicitComponent):
     def initialize(self):
         self.options.declare('in_name')
@@ -23,16 +24,14 @@ class SparseMatMatComp(ExplicitComponent):
         self.add_input(in_name, shape=shape, val=val)
 
         output_shape = self.num_sparse_rows, shape[1]
-        
-        num_inputs  = np.prod(shape)
+
+        num_inputs = np.prod(shape)
         num_outputs = np.prod(output_shape)
 
         self.add_output(out_name, shape=output_shape)
 
-        # Y = AX
-        # [ik] = [ij][jk]
-        A_data = self.sparse_mat[self.sparse_mat.nonzero()]
         A_rows, A_cols = self.sparse_mat.nonzero()
+        A_data = self.sparse_mat[self.sparse_mat.nonzero()]
 
         row_indices = np.arange(num_outputs).reshape(output_shape)
         col_indices = np.arange(num_inputs).reshape(shape)
@@ -45,10 +44,10 @@ class SparseMatMatComp(ExplicitComponent):
 
         # for i in range(nnz):
         #     for j in range(shape[1]):
-                # rows[i,j] =  row_indices[A_rows[i], j]
-                # cols[i,j] =  col_indices[A_cols[i], j]
-                # vals[i,j] =  A_data[i]
-        
+        # rows[i,j] =  row_indices[A_rows[i], j]
+        # cols[i,j] =  col_indices[A_cols[i], j]
+        # vals[i,j] =  A_data[i]
+
         vals = np.outer(A_data, np.ones(shape[1]))
         rows = row_indices[A_rows]
         cols = col_indices[A_cols]
@@ -56,7 +55,7 @@ class SparseMatMatComp(ExplicitComponent):
         # rows = row_indices[A_rows, np.arange(shape[1])]
 
         # # rows = row_indices[A_rows, 0]
-        # cols = col_indices[A_cols, :] 
+        # cols = col_indices[A_cols, :]
         # vals = np.outer(A_data, np.ones(shape[1]))
         # rows = np.einsum('ik,j->ijk', row_indices, np.ones(self.num_sparse_cols, int))
         # cols = np.einsum('jk,i->ijk', col_indices, np.ones(self.num_sparse_rows, int))
@@ -68,12 +67,12 @@ class SparseMatMatComp(ExplicitComponent):
         # print('VALS: ', np.repeat(self.sparse_mat.data.tolist(), shape[1]))
 
         self.declare_partials(
-            out_name, 
-            in_name, 
-            rows=rows.flatten(), 
+            out_name,
+            in_name,
+            rows=rows.flatten(),
             cols=cols.flatten(),
             val=vals.flatten()
-            )
+        )
 
     def compute(self, inputs, outputs):
         in_name = self.options['in_name']
@@ -87,15 +86,15 @@ if __name__ == "__main__":
     from openmdao.api import Problem, IndepVarComp
     prob = Problem()
 
-    shape = (100,3)
+    shape = (100, 3)
     test_vec = np.arange(300).reshape(shape)
 
     comp = IndepVarComp()
     comp.add_output('test_vec', val=test_vec)
     prob.model.add_subsystem('ivc', comp, promotes=['*'])
 
-    row  = np.array([0, 1, 2, 3])
-    col  = np.array([0, 1, 5, 8])
+    row = np.array([0, 1, 2, 3])
+    col = np.array([0, 1, 5, 8])
     data = np.array([1, 1, 1, 1])
     sprs = coo_array((data, (row, col)), shape=(4, 100))
 
@@ -115,4 +114,3 @@ if __name__ == "__main__":
     prob.check_partials(compact_print=True)
     prob.model.list_inputs(print_arrays=True)
     prob.model.list_outputs(print_arrays=True)
-
