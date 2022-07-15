@@ -12,7 +12,7 @@ Quaternions: real -> imaginary (left-right) or (top-down)
 class QuatRotVecComp(ExplicitComponent):
     def initialize(self):
 
-        self.options.declare('shape', types=tuple) 
+        self.options.declare('shape', types=tuple)
         self.options.declare(
             'quat_name',
             types=str,
@@ -25,7 +25,6 @@ class QuatRotVecComp(ExplicitComponent):
 
         self.options.declare('quat_vals', types=np.ndarray)
         self.options.declare('vec_vals', types=np.ndarray)
-
 
         self.options.declare('out_name',
                              types=str,
@@ -49,51 +48,53 @@ class QuatRotVecComp(ExplicitComponent):
         self.add_output(out_name, shape=shape + (3,))
 
         size = np.prod(shape)
-        out_indices = np.arange(size*3).reshape(shape +(3,))
-        vec_indices = np.arange(size*3).reshape(shape +(3,))
-        quat_indices = np.arange(size*4).reshape(shape +(4,))
+        out_indices = np.arange(size*3).reshape(shape + (3,))
+        vec_indices = np.arange(size*3).reshape(shape + (3,))
+        quat_indices = np.arange(size*4).reshape(shape + (4,))
 
-        r0 = np.zeros(shape + (3,3))
-        c0 = np.zeros(shape + (3,3))
+        r0 = np.zeros(shape + (3, 3))
+        c0 = np.zeros(shape + (3, 3))
 
         for i in range(3):
             for j in range(3):
-                r0[...,i,j] = out_indices[...,i]
-                c0[...,i,j] = vec_indices[...,j]
-                
+                r0[..., i, j] = out_indices[..., i]
+                c0[..., i, j] = vec_indices[..., j]
+
         self.declare_partials(out_name, vec_name, rows=r0.flatten(), cols=c0.flatten())
-        
-        r1 = np.zeros(shape + (3,4))
-        c1 = np.zeros(shape + (3,4))
+
+        r1 = np.zeros(shape + (3, 4))
+        c1 = np.zeros(shape + (3, 4))
 
         for i in range(3):
             for j in range(4):
-                r1[...,i,j] = out_indices[...,i]
-                c1[...,i,j] = quat_indices[...,j]
+                r1[..., i, j] = out_indices[..., i]
+                c1[..., i, j] = quat_indices[..., j]
 
         self.declare_partials(out_name, quat_name, rows=r1.flatten(), cols=c1.flatten())
 
     def dot_quat_vec(self, quat, vec):
-        dot_quat_vec = vec[...,0]*quat[...,1] + vec[...,1]*quat[...,2] + vec[...,2]*quat[...,3]
+        dot_quat_vec = vec[..., 0]*quat[..., 1] + vec[..., 1]*quat[..., 2] + vec[..., 2]*quat[..., 3]
         return dot_quat_vec
 
     def dot_quat_quat(self, quat):
-        dot_quat_quat = quat[...,1]**2 + quat[...,2]**2 + quat[...,3]**2
+        dot_quat_quat = quat[..., 1]**2 + quat[..., 2]**2 + quat[..., 3]**2
         return dot_quat_quat
 
     def execute(self, quat, vec):
 
-        shape = self.options['shape']   
+        shape = self.options['shape']
         shape = shape[:-1]
         temp = np.zeros(shape + (3,))
 
-        temp[...,0] = 2 * self.dot_quat_vec(quat,vec) * quat[...,1] + (quat[...,0]**2 - self.dot_quat_quat(quat)) * vec[...,0] + 2*quat[...,0] * (quat[...,2]*vec[...,2] - quat[...,3]*vec[...,1])  
-        
-        temp[...,1] = 2 * self.dot_quat_vec(quat,vec) * quat[...,2] + (quat[...,0]**2 - self.dot_quat_quat(quat)) * vec[...,1] + 2*quat[...,0] * (quat[...,3]*vec[...,0] - quat[...,1]*vec[...,2])
+        temp[..., 0] = 2 * self.dot_quat_vec(quat, vec) * quat[..., 1] + (quat[..., 0]**2 - self.dot_quat_quat(quat)) * \
+            vec[..., 0] + 2*quat[..., 0] * (quat[..., 2]*vec[..., 2] - quat[..., 3]*vec[..., 1])
 
-        temp[...,2] = 2 * self.dot_quat_vec(quat,vec) * quat[...,3] + (quat[...,0]**2 - self.dot_quat_quat(quat)) * vec[...,2] + 2*quat[...,0] * (quat[...,1]*vec[...,1] - quat[...,2]*vec[...,0])
+        temp[..., 1] = 2 * self.dot_quat_vec(quat, vec) * quat[..., 2] + (quat[..., 0]**2 - self.dot_quat_quat(quat)) * \
+            vec[..., 1] + 2*quat[..., 0] * (quat[..., 3]*vec[..., 0] - quat[..., 1]*vec[..., 2])
 
-        
+        temp[..., 2] = 2 * self.dot_quat_vec(quat, vec) * quat[..., 3] + (quat[..., 0]**2 - self.dot_quat_quat(quat)) * \
+            vec[..., 2] + 2*quat[..., 0] * (quat[..., 1]*vec[..., 1] - quat[..., 2]*vec[..., 0])
+
         return temp
 
     def compute(self, inputs, outputs):
@@ -108,50 +109,51 @@ class QuatRotVecComp(ExplicitComponent):
         vec_name = self.options['vec_name']
         out_name = self.options['out_name']
 
-
         quat = inputs[quat_name]
         vec = inputs[vec_name]
 
         shape = self.options['shape']
+        shape = shape[:-1]
 
-        temp = np.zeros(shape + (3,3))
+        temp = np.zeros(shape + (3, 3))
 
-        temp[...,0,0] = 2*quat[...,1]**2 + quat[...,0]**2 - quat[...,1]**2 - quat[...,2]**2 - quat[...,3]**2 
-        temp[...,0,1] = 2*quat[...,2]*quat[...,1] - 2*quat[...,0]*quat[...,3]
-        temp[...,0,2] = 2*quat[...,3]*quat[...,1] + 2*quat[...,0]*quat[...,2]
-        
-        temp[...,1,0] = 2*quat[...,1]*quat[...,2] + 2*quat[...,0]*quat[...,3]
-        temp[...,1,1] = 2*quat[...,2]**2 + quat[...,0]**2 - quat[...,1]**2 - quat[...,2]**2 - quat[...,3]**2 
-        temp[...,1,2] = 2*quat[...,3]*quat[...,2] - 2*quat[...,0]*quat[...,1]
+        temp[..., 0, 0] = 2*quat[..., 1]**2 + quat[..., 0]**2 - quat[..., 1]**2 - quat[..., 2]**2 - quat[..., 3]**2
+        temp[..., 0, 1] = 2*quat[..., 2]*quat[..., 1] - 2*quat[..., 0]*quat[..., 3]
+        temp[..., 0, 2] = 2*quat[..., 3]*quat[..., 1] + 2*quat[..., 0]*quat[..., 2]
 
-        temp[...,2,0] = 2*quat[...,1]*quat[...,3] - 2*quat[...,0]*quat[...,2]
-        temp[...,2,1] = 2*quat[...,2]*quat[...,3] + 2*quat[...,0]*quat[...,1]
-        temp[...,2,2] = 2*quat[...,3]**2 + quat[...,0]**2 - quat[...,1]**2 - quat[...,2]**2 - quat[...,3]**2
+        temp[..., 1, 0] = 2*quat[..., 1]*quat[..., 2] + 2*quat[..., 0]*quat[..., 3]
+        temp[..., 1, 1] = 2*quat[..., 2]**2 + quat[..., 0]**2 - quat[..., 1]**2 - quat[..., 2]**2 - quat[..., 3]**2
+        temp[..., 1, 2] = 2*quat[..., 3]*quat[..., 2] - 2*quat[..., 0]*quat[..., 1]
+
+        temp[..., 2, 0] = 2*quat[..., 1]*quat[..., 3] - 2*quat[..., 0]*quat[..., 2]
+        temp[..., 2, 1] = 2*quat[..., 2]*quat[..., 3] + 2*quat[..., 0]*quat[..., 1]
+        temp[..., 2, 2] = 2*quat[..., 3]**2 + quat[..., 0]**2 - quat[..., 1]**2 - quat[..., 2]**2 - quat[..., 3]**2
 
         partials[out_name, vec_name] = temp.flatten()
 
-        temp1 = np.zeros(shape + (3,4))
+        temp1 = np.zeros(shape + (3, 4))
 
-        temp1[...,0,0] = 2*quat[...,0]*vec[...,0] + 2*quat[...,2]*vec[...,2] - 2*quat[...,3]*vec[...,1]
-        temp1[...,0,1] = 4*vec[...,0]*quat[...,1] + 2*vec[...,1]*quat[...,2] + 2*vec[...,2]*quat[...,3] - 2*vec[...,0]*quat[...,1] 
-        temp1[...,0,2] = 2*vec[...,1]*quat[...,1] - 2*quat[...,2]*vec[...,0] + 2*quat[...,0]*vec[...,2]
-        temp1[...,0,3] = 2*vec[...,2]*quat[...,1] - 2*quat[...,3]*vec[...,0] - 2*quat[...,0]*vec[...,1]
+        temp1[..., 0, 0] = 2*quat[..., 0]*vec[..., 0] + 2*quat[..., 2]*vec[..., 2] - 2*quat[..., 3]*vec[..., 1]
+        temp1[..., 0, 1] = 4*vec[..., 0]*quat[..., 1] + 2*vec[..., 1]*quat[..., 2] + 2*vec[..., 2]*quat[..., 3] - 2*vec[..., 0]*quat[..., 1]
+        temp1[..., 0, 2] = 2*vec[..., 1]*quat[..., 1] - 2*quat[..., 2]*vec[..., 0] + 2*quat[..., 0]*vec[..., 2]
+        temp1[..., 0, 3] = 2*vec[..., 2]*quat[..., 1] - 2*quat[..., 3]*vec[..., 0] - 2*quat[..., 0]*vec[..., 1]
 
-        temp1[...,1,0] = 2*quat[...,0]*vec[...,1] + 2*quat[...,3]*vec[...,0] - 2*quat[...,1]*vec[...,2]
-        temp1[...,1,1] = 2*vec[...,0]*quat[...,2] - 2*quat[...,1]*vec[...,1] - 2*quat[...,0]*vec[...,2]
-        temp1[...,1,2] = 4*vec[...,1]*quat[...,2] + 2*vec[...,0]*quat[...,1] + 2*vec[...,2]*quat[...,3] - 2*quat[...,2]*vec[...,1]  
-        temp1[...,1,3] = 2*vec[...,2]*quat[...,2] - 2*quat[...,3]*vec[...,1] + 2*quat[...,0]*vec[...,0]
+        temp1[..., 1, 0] = 2*quat[..., 0]*vec[..., 1] + 2*quat[..., 3]*vec[..., 0] - 2*quat[..., 1]*vec[..., 2]
+        temp1[..., 1, 1] = 2*vec[..., 0]*quat[..., 2] - 2*quat[..., 1]*vec[..., 1] - 2*quat[..., 0]*vec[..., 2]
+        temp1[..., 1, 2] = 4*vec[..., 1]*quat[..., 2] + 2*vec[..., 0]*quat[..., 1] + 2*vec[..., 2]*quat[..., 3] - 2*quat[..., 2]*vec[..., 1]
+        temp1[..., 1, 3] = 2*vec[..., 2]*quat[..., 2] - 2*quat[..., 3]*vec[..., 1] + 2*quat[..., 0]*vec[..., 0]
 
-        temp1[...,2,0] = 2*quat[...,0]*vec[...,2] + 2*quat[...,1]*vec[...,1] - 2*quat[...,2]*vec[...,0]
-        temp1[...,2,1] = 2*vec[...,0]*quat[...,3] - 2*quat[...,1]*vec[...,2] + 2*quat[...,0]*vec[...,1]
-        temp1[...,2,2] = 2*vec[...,1]*quat[...,3] - 2*quat[...,2]*vec[...,2] - 2*quat[...,0]*vec[...,0]
-        temp1[...,2,3] = 2*vec[...,0]*quat[...,1] + 2*vec[...,1]*quat[...,2] + 4*vec[...,2]*quat[...,3] - 2*quat[...,3]*vec[...,2] 
-         
+        temp1[..., 2, 0] = 2*quat[..., 0]*vec[..., 2] + 2*quat[..., 1]*vec[..., 1] - 2*quat[..., 2]*vec[..., 0]
+        temp1[..., 2, 1] = 2*vec[..., 0]*quat[..., 3] - 2*quat[..., 1]*vec[..., 2] + 2*quat[..., 0]*vec[..., 1]
+        temp1[..., 2, 2] = 2*vec[..., 1]*quat[..., 3] - 2*quat[..., 2]*vec[..., 2] - 2*quat[..., 0]*vec[..., 0]
+        temp1[..., 2, 3] = 2*vec[..., 0]*quat[..., 1] + 2*vec[..., 1]*quat[..., 2] + 4*vec[..., 2]*quat[..., 3] - 2*quat[..., 3]*vec[..., 2]
+
         partials[out_name, quat_name] = temp1.flatten()
-    
+
+
 if __name__ == "__main__":
     from openmdao.api import Problem, IndepVarComp
-    shape=(2,)
+    shape = (2,)
     quatshape = shape + (4,)
     vecshape = shape + (3,)
     prob = Problem()
@@ -183,19 +185,6 @@ if __name__ == "__main__":
     prob.model.list_inputs(print_arrays=True)
     prob.model.list_outputs(print_arrays=True)
 
-
-
-
-
-
-
-
-
-
-
-
-
- 
     # # prob = Problem()
 
     # quatval = np.random.random(quatshape)
@@ -203,7 +192,6 @@ if __name__ == "__main__":
 
     # prob.setup()
     # # prob.run_model()
-
 
     # comp = IndepVarComp()
     # comp.add_output('quat', val=quatval)
@@ -222,7 +210,6 @@ if __name__ == "__main__":
     #     out_name='rotvec',
     # )
     # prob.model.add_subsystem('rotated_vec', comp, promotes=['*'])
-
 
     # prob.model.list_inputs(print_arrays=True)
     # prob.model.list_outputs(print_arrays=True)
@@ -244,7 +231,7 @@ if __name__ == "__main__":
     #     for ind in range(3):
     #         cols[..., ind, :] = quat_indices
     #     self.declare_partials(out_name, quat_name, rows=rows, cols=cols, method='cs')
-            
+
     #     rows = np.zeros(shape + (3, 3), int)
     #     for ind in range(3):
     #         rows[..., :, ind] = out_indices
@@ -274,7 +261,7 @@ if __name__ == "__main__":
     #     out_name = self.options['out_name']
 
     #     outputs[out_name] = self.execute(inputs[quat_name], inputs[vec_name])
-       
+
     # def compute_partials(self, inputs, partials):
     #     quat_name = self.options['quat_name']
     #     vec_name = self.options['vec_name']
@@ -300,4 +287,3 @@ if __name__ == "__main__":
     #         out = self.execute(quat, vec)
     #         vec[..., 0] -= ih
     #         partial_vec[:, :, :, :, ind] = out.imag / h
-

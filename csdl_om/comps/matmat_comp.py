@@ -20,6 +20,7 @@ class MatMatComp(ExplicitComponent):
     out_shape: tuple
         A tuple that is the size of the output after the matrix multiplication
     '''
+
     def initialize(self):
         self.options.declare('in_names', types=list)
         self.options.declare('out_name', types=str)
