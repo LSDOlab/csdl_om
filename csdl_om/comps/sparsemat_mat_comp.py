@@ -31,7 +31,7 @@ class SparseMatMatComp(ExplicitComponent):
 
         # Y = AX
         # [ik] = [ij][jk]
-        A_data = self.sparse_mat.data
+        A_data = self.sparse_mat[self.sparse_mat.nonzero()]
         A_rows, A_cols = self.sparse_mat.nonzero()
 
         row_indices = np.arange(num_outputs).reshape(output_shape)
