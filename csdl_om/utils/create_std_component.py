@@ -1,5 +1,6 @@
 from csdl import StandardOperation
 from csdl.operations.exp import exp
+from csdl.operations.exp_a import exp_a
 from csdl.operations.log import log
 from csdl.operations.log10 import log10
 from csdl.operations.sin import sin
@@ -111,6 +112,7 @@ from csdl_om.comps.axiswise_max_comp import AxisMaxComp
 from csdl_om.comps.elementwise_max_comp import ElementwiseMaxComp
 from csdl_om.comps.quatrotveccomp import QuatRotVecComp
 from csdl_om.comps.sparsemat_mat_comp import SparseMatMatComp
+from csdl_om.comps.exp_a_comp import ExpAComp
 
 
 import numpy as np
@@ -191,6 +193,15 @@ op_comp_map[opclass] = lambda op: ExpComp(
     in_name=op.dependencies[0].name,
     out_name=op.outs[0].name,
     val=op.dependencies[0].val,
+)
+
+opclass = exp_a
+op_comp_map[opclass] = lambda op: ExpAComp(
+    shape=op.dependencies[0].shape,
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+    a=op.literals['a'],
 )
 
 opclass = log10
