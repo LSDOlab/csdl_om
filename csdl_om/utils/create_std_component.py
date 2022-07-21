@@ -1,5 +1,6 @@
 from csdl import StandardOperation
 from csdl.operations.exp import exp
+from csdl.operations.exp_a import exp_a
 from csdl.operations.log import log
 from csdl.operations.log10 import log10
 from csdl.operations.sin import sin
@@ -24,6 +25,7 @@ from csdl.operations.arcsinh import arcsinh
 from csdl.operations.arccosh import arccosh
 from csdl.operations.arctanh import arctanh
 from csdl_om.comps.expcomp import ExpComp
+from csdl_om.comps.exp_a_comp import ExpAComp
 from csdl_om.comps.logcomp import LogComp
 from csdl_om.comps.log10comp import Log10Comp
 from csdl_om.comps.sincomp import SinComp
@@ -192,6 +194,16 @@ op_comp_map[opclass] = lambda op: ExpComp(
     out_name=op.outs[0].name,
     val=op.dependencies[0].val,
 )
+
+opclass = exp_a
+op_comp_map[opclass] = lambda op: ExpAComp(
+    shape=op.dependencies[0].shape,
+    in_name=op.dependencies[0].name,
+    out_name=op.outs[0].name,
+    val=op.dependencies[0].val,
+    a=op.literals['a'],
+)
+
 
 opclass = log10
 op_comp_map[opclass] = lambda op: Log10Comp(
