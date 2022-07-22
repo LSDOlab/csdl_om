@@ -1,6 +1,6 @@
 import numpy as np
 from openmdao.api import ExplicitComponent
-from scipy.sparse import coo_array
+from scipy.sparse import coo_matrix
 
 
 class SparseMatMatComp(ExplicitComponent):
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     row = np.array([0, 1, 2, 3])
     col = np.array([0, 1, 5, 8])
     data = np.array([1, 1, 1, 1])
-    sprs = coo_array((data, (row, col)), shape=(4, 100))
+    sprs = coo_matrix((data, (row, col)), shape=(4, 100))
 
     # print("TEST MULT: ", sprs @ test_vec)
 
