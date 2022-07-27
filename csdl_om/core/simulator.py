@@ -19,6 +19,7 @@ from csdl_om.core.problem import ProblemNew
 from openmdao.api import Group, IndepVarComp, ImplicitComponent
 from csdl.rep.get_nodes import *
 from openmdao.core.component import Component
+from openmdao.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS as OM_NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 from csdl.solvers.nonlinear.nonlinear_block_jac import NonlinearBlockJac
 from csdl.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
@@ -91,6 +92,9 @@ class Simulator(SimulatorBase):
         rep: GraphRepresentation,
         mode='auto',
     ):
+        # KLUDGE: THIS IS TEMPORARY!!!
+        if isinstance(rep, Model):
+            rep = GraphRepresentation(rep)
         super().__init__(rep)
         if mode not in ['auto', 'fwd', 'rev']:
             raise ValueError(
@@ -110,7 +114,7 @@ class Simulator(SimulatorBase):
                 dict(),
                 dict(),
                 dict(),
-                connections=rep.connections,
+                connections=rep.user_declared_connections,
             ))
 
         # After constructing an executable object, OpenMDAO still needs
@@ -322,7 +326,8 @@ class Simulator(SimulatorBase):
         design_variables: Dict[str, Dict[str, Any]],
         constraints: Dict[str, dict],
         objective: Dict[str, Any],
-        connections: List[Tuple[str, str]] = [],
+        connections: Tuple[Dict[str, Tuple[dict, List[Tuple[str, str]]]],
+                           List[Tuple[str, str]]] = (dict(), []),
         namespace: str = '',
     ) -> Group:
         """
@@ -332,6 +337,7 @@ class Simulator(SimulatorBase):
         """
         # Make an OpenMDAO Group object for each CSDL Model object
         group = Group()
+        group.nonlinear_solver = OM_NonlinearBlockGS(iprint=0)
 
         # OpenMDAO represents top level system inputs using the concept
         # of an IdependentVariableComponent whose outputs are the
@@ -395,6 +401,7 @@ class Simulator(SimulatorBase):
                 sorted_nodes = node.sorted_nodes
                 design_variables = node.design_variables
                 constraints = node.constraints
+                print(connections[0].keys())
                 sys = self.build_group(
                     graph,
                     sorted_nodes,
@@ -402,6 +409,7 @@ class Simulator(SimulatorBase):
                     constraints,
                     objective
                     if node.objective == EMPTY_DICT else node.objective,
+                    connections=connections[0][node.name],
                     namespace=prepend_namespace(namespace, node.name),
                 )
                 group.add_subsystem(
@@ -496,7 +504,7 @@ class Simulator(SimulatorBase):
         del custom_operation_instance_to_component_type_map
 
         # issue connections
-        for (a, b) in connections:
+        for (a, b) in connections[1]:
             group.connect(a, b)
 
         # if current model has objective, add objective
