@@ -14,6 +14,7 @@ from csdl.rep.variable_node import VariableNode
 from csdl.rep.operation_node import OperationNode
 from csdl.rep.implicit_operation_node import ImplicitOperationNode
 from csdl.utils.prepend_namespace import prepend_namespace
+from csdl import Model
 import numpy as np
 from csdl_om.core.problem import ProblemNew
 from openmdao.api import Group, IndepVarComp, ImplicitComponent
@@ -294,7 +295,7 @@ class Simulator(SimulatorBase):
     def visualize_implementation(self, recursive=False, **kwargs):
         from openmdao.api import n2
         from time import sleep
-        self.run(**kwargs)
+        # self.run(**kwargs)
         n2(self.executable)
         # need this delay so that a browser tab opens for each n2
         # diagram before the next n2 diagram gets generated
@@ -401,7 +402,7 @@ class Simulator(SimulatorBase):
                 sorted_nodes = node.sorted_nodes
                 design_variables = node.design_variables
                 constraints = node.constraints
-                print(connections[0].keys())
+                # print(connections[0].keys())
                 sys = self.build_group(
                     graph,
                     sorted_nodes,
