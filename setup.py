@@ -1,10 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='csdl_om',
-    packages=[
-        'csdl_om',
-    ],
+    packages=find_packages(),
+    #packages=['csdl_om'],
     install_requires=[
         'csdl<1',
         'openmdao',
